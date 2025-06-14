@@ -180,4 +180,30 @@ if ($Mode -in @("Build", "Ship")) {
         }
 
     # Module psm1 build
+
+    # Classes
+    Write-Verbose "Importing class order from '$classManifestPath'"
+    $classesManifestData = Import-PowerShellDataFile -Path $classManifestPath
+    $classesToImport = $classesManifestData.Classes | foreach {
+        Join-Path -Path $classesRootPath -ChildPath $_
+    } | Get-Item # check if files exist
+
+    $classesToImport | foreach {
+        Write-Verbose "Attempting to import class file: $($_.FullName)"
+        if ($_.Extension -eq ".ps1") { # standard PowerShell class
+            $null
+        }
+        elseif ($_.Extension -eq ".cs") { # C# class
+            $null
+        }
+        elseif ($_.Extension -eq ".js") { # JavaScript class
+            $null
+        }
+        elseif ($_.Extension -eq ".vb") { # Visual Basic class
+            $null
+        }
+        else { # if unsupported class file type
+            throw "Unsupported class file '$($_.FullName)', supported extensions are .ps1, .cs, .js, .vb"
+        }
+    }
 }
