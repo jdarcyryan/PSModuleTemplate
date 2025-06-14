@@ -61,19 +61,22 @@ $errorActionPreference = 'Stop'
 $moduleName = Get-Item $PSScriptRoot | % Name
 $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$moduleName.psd1"
 
-# Manifest template creation
-if (Test-Path -Path $manifestPath -PathType Leaf) {
-    Write-Verbose "Module manifest found at .\$moduleName.psd1, skipping creation."
-}
-elseif (Test-Path -Path $manifestPath -PathType Container) {
-    throw "The path '$manifestPath' is a directory, not a file."
-}
-else {
-    New-ModuleManifest -Path $manifestPath -RootModule "$moduleName.psm1" -ModuleVersion "1.0.0"
-    Write-Verbose "Module manifest created at .\$moduleName.psd1"
+if ($Mode -eq "Setup")
+{
+    # Manifest template creation
+    if (Test-Path -Path $manifestPath -PathType Leaf) {
+        Write-Verbose "Module manifest found at .\$moduleName.psd1, skipping creation."
+    }
+    elseif (Test-Path -Path $manifestPath -PathType Container) {
+        throw "The path '$manifestPath' is a directory, not a file."
+    }
+    else {
+        New-ModuleManifest -Path $manifestPath -RootModule "$moduleName.psm1" -ModuleVersion "1.0.0"
+        Write-Verbose "Module manifest created at .\$moduleName.psd1"
+    }
 }
 
-# Build module psm1
+# Build module
 if ($Mode -in @("Build", "Ship")) {
     # Build folder definitions
     $buildPath = Join-Path -Path $PSScriptRoot -ChildPath "build"
