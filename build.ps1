@@ -124,4 +124,55 @@ if ($Mode -in @("Build", "Ship")) {
     $updatedManifestContent = $manifestContent -replace "ModuleVersion\s*=\s*'[\d\.]+'", "ModuleVersion = '$env:PSModuleVersion'"
     Set-Content -Path $outputManfestPath -Value $updatedManifestContent -Force
     Write-Verbose "Module manifest updated to version $env:PSModuleVersion at '$outputManfestPath'"
+
+    # Define reference paths
+    $classesRootPath = Join-Path -Path $PSScriptRoot -ChildPath "classes"
+    $classManifestPath = Join-Path -Path $classesRootPath -ChildPath "classes.psd1"
+    $privateFunctionsPath = Join-Path -Path $PSScriptRoot -ChildPath "private"
+    $publicFunctionsPath = Join-Path -Path $PSScriptRoot -ChildPath "public"
+
+    # Copy relevant files
+
+    # Classes directory
+    Get-ChildItem -Path $classesRootPath -Recurse |
+        ? FullName -ne $classManifestPath |
+        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
+            $destinationPath = $_.FullName -replace [regex]::Escape($classesRootPath), $moduleOutputPath
+            Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
+        }
+    
+    # Private directory
+    Get-ChildItem -Path $privateFunctionsPath -Recurse |
+        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
+        $destinationPath = $_.FullName -replace [regex]::Escape($privateFunctionsPath), $moduleOutputPath
+        Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
+    }
+
+    # Public directory
+    Get-ChildItem -Path $publicFunctionsPath -Recurse |
+        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
+        $destinationPath = $_.FullName -replace [regex]::Escape($publicFunctionsPath), $moduleOutputPath
+        Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
+    }
+
+    # Root directory
+    Get-ChildItem -Path $PSScriptRoot -File |
+        ? Name -notin @("$moduleName.psd1", "build.ps1") |
+        ? Extension -notin @(".gitignore", ".gitkeep") | foreach {
+            Copy-Item -Path $_.FullName -Destination $moduleOutputPath -Force -Verbose:$verbosePreference
+        }
+    
+    Get-ChildItem -Path $PSScriptRoot -Directory |
+        ? Name -notin @("classes", "private", "public", "build") | foreach {
+            Copy-Item -Path $_.FullName -Destination $moduleOutputPath -Force -Verbose:$verbosePreference
+        }
+
+    Get-ChildItem -Path $PSScriptRoot -Directory |
+        ? Name -notin @("classes", "private", "public", "build") | 
+        Get-ChildItem -Recurse |
+        ? extension -notin @(".ps1", ".gitignore", ".gitkeep") |
+        foreach {
+            $destinationPath = $_.FullName -replace [regex]::Escape($PSScriptRoot), $moduleOutputPath
+            Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
+        }
 }
