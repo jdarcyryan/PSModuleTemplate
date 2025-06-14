@@ -63,17 +63,65 @@ $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$moduleName.psd1"
 
 # Manifest template creation
 if (Test-Path -Path $manifestPath -PathType Leaf) {
-    Write-Verbose "Module manifest found, skipping creation."
+    Write-Verbose "Module manifest found at .\$moduleName.psd1, skipping creation."
 }
 elseif (Test-Path -Path $manifestPath -PathType Container) {
     throw "The path '$manifestPath' is a directory, not a file."
 }
 else {
     New-ModuleManifest -Path $manifestPath -RootModule "$moduleName.psm1" -ModuleVersion "1.0.0"
-    Write-Verbose "Module manifest created at root\$moduleName.psd1"
+    Write-Verbose "Module manifest created at .\$moduleName.psd1"
 }
 
 # Build module psm1
 if ($Mode -in @("Build", "Ship")) {
+    # Build folder definitions
+    $buildPath = Join-Path -Path $PSScriptRoot -ChildPath "build"
+    $buildOutputPath = Join-Path -Path $buildPath -ChildPath "output"
 
+    # Clean up previous build output
+    if (Test-Path -Path $buildOutputPath) {
+        Write-Verbose "Cleaning up previous build output at '$buildOutputPath'"
+        Remove-item -Path $buildOutputPath -Recurse -Force
+    }
+
+    # Create build output directory
+    $null = New-Item -Path $buildOutputPath -ItemType Directory
+
+    # Import manifest data
+    Write-Verbose "Importing module manifest data from '$manifestPath'"
+    $ManifestData = Import-PowerShellDataFile -Path $manifestPath
+
+    if ($Mode -eq "Ship") {
+        if (!$env:PSModuleVersion) { # Set in actions CI
+            throw "Environment variable 'PSModuleVersion' is not set."
+        }
+        else {
+            Write-Verbose "Found environment variable PSModuleVersion: $env:PSModuleVersion"
+        }
+    }
+    else {
+        $env:PSModuleVersion = $ManifestData.ModuleVersion # Default version for builds
+        Write-Verbose "Using default module version from manifest: $env:PSModuleVersion"
+    }
+
+    # Capture module name (in case updated from root directory name)
+    $moduleName = Get-Item $manifestPath | % BaseName
+
+    # Create module folder structure
+    $moduleOutputPath = Join-Path -Path $buildOutputPath -ChildPath "$moduleName\$env:PSModuleVersion"
+    Write-Verbose "Creating module output path '$moduleOutputPath'"
+    $null = New-Item -Path $moduleOutputPath -ItemType Directory -Force
+
+    # Create module psm1 file
+    $outputModulePath = Join-Path -Path $moduleOutputPath -ChildPath "$moduleName.psm1"
+    $null = New-Item -Path $outputModulePath -ItemType File -Force
+
+    # Copy and version manifest
+    $outputManfestPath = Join-Path -Path $moduleOutputPath -ChildPath "$moduleName.psd1"
+    Copy-Item -Path $manifestPath -Destination $outputManfestPath -Force
+    $manifestContent = Get-Content -Path $outputManfestPath -Raw
+    $updatedManifestContent = $manifestContent -replace "ModuleVersion\s*=\s*'[\d\.]+'", "ModuleVersion = '$env:PSModuleVersion'"
+    Set-Content -Path $outputManfestPath -Value $updatedManifestContent -Force
+    Write-Verbose "Module manifest updated to version $env:PSModuleVersion at '$outputManfestPath'"
 }
