@@ -42,137 +42,277 @@
 .LINK
     https://github.com/jdarcyryan/PSModuleTemplate
 #>
-[CmdLetBinding()]
+
+[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
-    [ValidateSet(
-        "Build", # Build with no versioning (pull request)
-        "Setup", # Setup module manfiest (for new modules)
-        "Ship" # Build with version (release)
-    )]
-    [string]
-    $Mode
+    [ValidateSet("Build", "Setup", "Ship")]
+    [string]$Mode
 )
 
-$errorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
-# Standard definitions for all modes
-$moduleName = Get-Item $PSScriptRoot | % Name
-$manifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$moduleName.psd1"
+#region Standard Definitions
+# Get module name from the root directory
+$ModuleName = (Get-Item $PSScriptRoot).Name
+$ModuleManifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$ModuleName.psd1"
 
-# Manifest template creation
-if (Test-Path -Path $manifestPath -PathType Leaf) {
-    Write-Verbose "Module manifest found at .\$moduleName.psd1, skipping creation."
-}
-elseif (Test-Path -Path $manifestPath -PathType Container) {
-    throw "The path '$manifestPath' is a directory, not a file."
-}
-else {
-    New-ModuleManifest -Path $manifestPath -RootModule "$moduleName.psm1" -ModuleVersion "1.0.0"
-    Write-Verbose "Module manifest created at .\$moduleName.psd1"
-}
+Write-Verbose "Module Name: '$ModuleName'"
+Write-Verbose "Module Manifest Path: '$ModuleManifestPath'"
+#endregion
 
-# Build module psm1
-if ($Mode -in @("Build", "Ship")) {
-    # Build folder definitions
-    $buildPath = Join-Path -Path $PSScriptRoot -ChildPath "build"
-    $buildOutputPath = Join-Path -Path $buildPath -ChildPath "output"
-
-    # Clean up previous build output
-    if (Test-Path -Path $buildOutputPath) {
-        Write-Verbose "Cleaning up previous build output at '$buildOutputPath'"
-        Remove-item -Path $buildOutputPath -Recurse -Force
+#region Setup Mode - Create Module Manifest
+if ($Mode -eq "Setup") {
+    Write-Verbose "Running in Setup mode - creating module manifest"
+    
+    if (Test-Path -Path $ModuleManifestPath -PathType Leaf) {
+        Write-Verbose "Module manifest already exists at '.\$ModuleName.psd1', skipping creation."
     }
-
-    # Create build output directory
-    $null = New-Item -Path $buildOutputPath -ItemType Directory
-
-    # Import manifest data
-    Write-Verbose "Importing module manifest data from '$manifestPath'"
-    $ManifestData = Import-PowerShellDataFile -Path $manifestPath
-
-    if ($Mode -eq "Ship") {
-        if (!$env:PSModuleVersion) { # Set in actions CI
-            throw "Environment variable 'PSModuleVersion' is not set."
-        }
-        else {
-            Write-Verbose "Found environment variable PSModuleVersion: $env:PSModuleVersion"
-        }
+    elseif (Test-Path -Path $ModuleManifestPath -PathType Container) {
+        throw "The path '$ModuleManifestPath' is a directory, not a file."
     }
     else {
-        $env:PSModuleVersion = $ManifestData.ModuleVersion # Default version for builds
-        Write-Verbose "Using default module version from manifest: $env:PSModuleVersion"
+        New-ModuleManifest -Path $ModuleManifestPath -RootModule "$ModuleName.psm1" -ModuleVersion "1.0.0"
+        Write-Verbose "Module manifest created at '.\$ModuleName.psd1'"
     }
-
-    # Capture module name (in case updated from root directory name)
-    $moduleName = Get-Item $manifestPath | % BaseName
-
-    # Create module folder structure
-    $moduleOutputPath = Join-Path -Path $buildOutputPath -ChildPath "$moduleName\$env:PSModuleVersion"
-    Write-Verbose "Creating module output path '$moduleOutputPath'"
-    $null = New-Item -Path $moduleOutputPath -ItemType Directory -Force
-
-    # Create module psm1 file
-    $outputModulePath = Join-Path -Path $moduleOutputPath -ChildPath "$moduleName.psm1"
-    $null = New-Item -Path $outputModulePath -ItemType File -Force
-
-    # Copy and version manifest
-    $outputManfestPath = Join-Path -Path $moduleOutputPath -ChildPath "$moduleName.psd1"
-    Copy-Item -Path $manifestPath -Destination $outputManfestPath -Force
-    $manifestContent = Get-Content -Path $outputManfestPath -Raw
-    $updatedManifestContent = $manifestContent -replace "ModuleVersion\s*=\s*'[\d\.]+'", "ModuleVersion = '$env:PSModuleVersion'"
-    Set-Content -Path $outputManfestPath -Value $updatedManifestContent -Force
-    Write-Verbose "Module manifest updated to version $env:PSModuleVersion at '$outputManfestPath'"
-
-    # Define reference paths
-    $classesRootPath = Join-Path -Path $PSScriptRoot -ChildPath "classes"
-    $classManifestPath = Join-Path -Path $classesRootPath -ChildPath "classes.psd1"
-    $privateFunctionsPath = Join-Path -Path $PSScriptRoot -ChildPath "private"
-    $publicFunctionsPath = Join-Path -Path $PSScriptRoot -ChildPath "public"
-
-    # Copy relevant files
-
-    # Classes directory
-    Get-ChildItem -Path $classesRootPath -Recurse |
-        ? FullName -ne $classManifestPath |
-        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
-            $destinationPath = $_.FullName -replace [regex]::Escape($classesRootPath), $moduleOutputPath
-            Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
-        }
-    
-    # Private directory
-    Get-ChildItem -Path $privateFunctionsPath -Recurse |
-        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
-        $destinationPath = $_.FullName -replace [regex]::Escape($privateFunctionsPath), $moduleOutputPath
-        Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
-    }
-
-    # Public directory
-    Get-ChildItem -Path $publicFunctionsPath -Recurse |
-        ? Extension -notin @(".ps1", ".gitignore", ".gitkeep") | foreach {
-        $destinationPath = $_.FullName -replace [regex]::Escape($publicFunctionsPath), $moduleOutputPath
-        Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
-    }
-
-    # Root directory
-    Get-ChildItem -Path $PSScriptRoot -File |
-        ? Name -notin @("$moduleName.psd1", "build.ps1") |
-        ? Extension -notin @(".gitignore", ".gitkeep") | foreach {
-            Copy-Item -Path $_.FullName -Destination $moduleOutputPath -Force -Verbose:$verbosePreference
-        }
-    
-    Get-ChildItem -Path $PSScriptRoot -Directory |
-        ? Name -notin @("classes", "private", "public", "build") | foreach {
-            Copy-Item -Path $_.FullName -Destination $moduleOutputPath -Force -Verbose:$verbosePreference
-        }
-
-    Get-ChildItem -Path $PSScriptRoot -Directory |
-        ? Name -notin @("classes", "private", "public", "build") | 
-        Get-ChildItem -Recurse |
-        ? extension -notin @(".ps1", ".gitignore", ".gitkeep") |
-        foreach {
-            $destinationPath = $_.FullName -replace [regex]::Escape($PSScriptRoot), $moduleOutputPath
-            Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
-        }
 }
+#endregion
+
+#region Build and Ship Modes - Compile Module
+if ($Mode -in @("Build", "Ship")) {
+    Write-Verbose "Running in $Mode mode - compiling module"
+    
+    #region Build Directory Setup
+    $BuildRootPath = Join-Path -Path $PSScriptRoot -ChildPath "build"
+    $BuildOutputPath = Join-Path -Path $BuildRootPath -ChildPath "output"
+
+    # Clean up any previous build artifacts
+    if (Test-Path -Path $BuildOutputPath) {
+        Write-Verbose "Cleaning up previous build output at '$BuildOutputPath'"
+        Remove-Item -Path $BuildOutputPath -Recurse -Force
+    }
+
+    # Create fresh build output directory
+    $null = New-Item -Path $BuildOutputPath -ItemType Directory
+    Write-Verbose "Created build output directory: '$BuildOutputPath'"
+    #endregion
+
+    #region Version Management
+    # Import current manifest data
+    Write-Verbose "Importing module manifest data from '$ModuleManifestPath'"
+    $CurrentManifestData = Import-PowerShellDataFile -Path $ModuleManifestPath
+
+    if ($Mode -eq "Ship") {
+        # For shipping, use environment variable set by CI/CD pipeline
+        if (-not $env:PSModuleVersion) {
+            throw "Environment variable 'PSModuleVersion' is not set. Required for Ship mode."
+        }
+        $ModuleVersion = $env:PSModuleVersion
+        Write-Verbose "Using CI/CD version for shipping: '$ModuleVersion'"
+    }
+    else {
+        # For building, use version from manifest
+        $ModuleVersion = $CurrentManifestData.ModuleVersion
+        Write-Verbose "Using manifest version for building: '$ModuleVersion'"
+    }
+    #endregion
+
+    #region Output Directory Structure
+    # Create versioned module output directory
+    $ModuleOutputPath = Join-Path -Path $BuildOutputPath -ChildPath "$ModuleName\$ModuleVersion"
+    Write-Verbose "Creating versioned module output path: '$ModuleOutputPath'"
+    $null = New-Item -Path $ModuleOutputPath -ItemType Directory -Force
+
+    # Create the main module file (.psm1)
+    $OutputModuleFilePath = Join-Path -Path $ModuleOutputPath -ChildPath "$ModuleName.psm1"
+    $null = New-Item -Path $OutputModuleFilePath -ItemType File -Force
+    Write-Verbose "Created module file: '$OutputModuleFilePath'"
+    #endregion
+
+    #region Manifest Processing
+    # Copy and update manifest with correct version
+    $OutputManifestPath = Join-Path -Path $ModuleOutputPath -ChildPath "$ModuleName.psd1"
+    Copy-Item -Path $ModuleManifestPath -Destination $OutputManifestPath -Force
+    
+    # Update version in the copied manifest
+    $ManifestContent = Get-Content -Path $OutputManifestPath -Raw
+    $UpdatedManifestContent = $ManifestContent -replace "ModuleVersion\s*=\s*'[\d\.]+'", "ModuleVersion = '$ModuleVersion'"
+    Set-Content -Path $OutputManifestPath -Value $UpdatedManifestContent -Force
+    Write-Verbose "Updated module manifest version to '$ModuleVersion' at '$OutputManifestPath'"
+    #endregion
+
+    #region Source Directory Definitions
+    $SourceDirectories = @{
+        Classes = Join-Path -Path $PSScriptRoot -ChildPath "classes"
+        Private = Join-Path -Path $PSScriptRoot -ChildPath "private"
+        Public  = Join-Path -Path $PSScriptRoot -ChildPath "public"
+    }
+    
+    $ClassesManifestPath = Join-Path -Path $SourceDirectories.Classes -ChildPath "classes.psd1"
+    
+    Write-Verbose "Source directories configured:"
+    $SourceDirectories.GetEnumerator() | ForEach-Object { 
+        Write-Verbose "  $($_.Key): '$($_.Value)'" 
+    }
+    #endregion
+
+    #region File Copying Operations
+    Write-Verbose "Copying non-PowerShell files to output directory"
+    
+    # Copy files from classes directory (excluding .ps1 files and the classes manifest)
+    Get-ChildItem -Path $SourceDirectories.Classes -Recurse |
+        Where-Object { $_.FullName -ne $ClassesManifestPath } |
+        Where-Object { $_.Extension -notin @(".ps1", ".gitignore", ".gitkeep") } |
+        ForEach-Object {
+            $DestinationPath = $_.FullName -replace [regex]::Escape($SourceDirectories.Classes), $ModuleOutputPath
+            Copy-Item -Path $_.FullName -Destination $DestinationPath -Force -Verbose:$VerbosePreference
+        }
+    
+    # Copy files from private directory (excluding .ps1 files)
+    Get-ChildItem -Path $SourceDirectories.Private -Recurse |
+        Where-Object { $_.Extension -notin @(".ps1", ".gitignore", ".gitkeep") } |
+        ForEach-Object {
+            $DestinationPath = $_.FullName -replace [regex]::Escape($SourceDirectories.Private), $ModuleOutputPath
+            Copy-Item -Path $_.FullName -Destination $DestinationPath -Force -Verbose:$VerbosePreference
+        }
+
+    # Copy files from public directory (excluding .ps1 files)
+    Get-ChildItem -Path $SourceDirectories.Public -Recurse |
+        Where-Object { $_.Extension -notin @(".ps1", ".gitignore", ".gitkeep") } |
+        ForEach-Object {
+            $DestinationPath = $_.FullName -replace [regex]::Escape($SourceDirectories.Public), $ModuleOutputPath
+            Copy-Item -Path $_.FullName -Destination $DestinationPath -Force -Verbose:$VerbosePreference
+        }
+
+    # Copy files from root directory (excluding manifest and build script)
+    $ExcludedRootFiles = @("$ModuleName.psd1", "build.ps1")
+    $ExcludedRootExtensions = @(".gitignore", ".gitkeep")
+    
+    Get-ChildItem -Path $PSScriptRoot -File |
+        Where-Object { $_.Name -notin $ExcludedRootFiles } |
+        Where-Object { $_.Extension -notin $ExcludedRootExtensions } |
+        ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $ModuleOutputPath -Force -Verbose:$VerbosePreference
+        }
+    
+    # Copy additional directories (excluding build and source directories)
+    $ExcludedDirectories = @("classes", "private", "public", "build")
+    
+    Get-ChildItem -Path $PSScriptRoot -Directory |
+        Where-Object { $_.Name -notin $ExcludedDirectories } |
+        ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination $ModuleOutputPath -Recurse -Force -Verbose:$VerbosePreference
+        }
+    #endregion
+
+    #region Module Content Assembly
+    Write-Verbose "Assembling module content (.psm1 file)"
+    
+    #region Classes Processing
+    Write-Verbose "Processing classes from '$ClassesManifestPath'"
+    $ClassesManifestData = Import-PowerShellDataFile -Path $ClassesManifestPath
+    
+    # Get ordered list of class files based on manifest
+    $ClassFilesToImport = $ClassesManifestData.Classes | ForEach-Object {
+        Join-Path -Path $SourceDirectories.Classes -ChildPath $_
+    } | Get-Item  # Validate files exist
+
+    foreach ($ClassFile in $ClassFilesToImport) {
+        Write-Verbose "Processing class file: $($ClassFile.FullName)"
+
+        switch ($ClassFile.Extension) {
+            ".ps1" { 
+                # Standard PowerShell class
+                Write-Verbose "Adding PowerShell class from '$($ClassFile.FullName)'"
+                $ClassContent = Get-Content -Path $ClassFile.FullName -Raw
+                "$ClassContent`n" | Add-Content -Path $OutputModuleFilePath -Force
+            }
+            
+            { $_ -in @(".cs", ".vb") } { 
+                # Compiled classes (C# or Visual Basic)
+                $ClassType = switch ($ClassFile.Extension) {
+                    ".cs" { "CSharp" }
+                    ".vb" { "VisualBasic" }
+                }
+                
+                Write-Verbose "Adding $ClassType class from '$($ClassFile.FullName)'"
+                "Add-Type -Path `"`$PSScriptRoot\$($ClassFile.Name)`"`n" | Add-Content -Path $OutputModuleFilePath -Force
+            }
+            
+            default { 
+                throw "Unsupported class file '$($ClassFile.FullName)'. Supported extensions are .ps1, .cs, .vb"
+            }
+        }
+    }
+    #endregion
+
+    #region Functions Processing
+    Write-Verbose "Processing functions from private and public directories"
+
+    $PublicFunctionNames = @()
+    $AliasesToExport = @()
+
+    # Process private functions first (internal functions)
+    Get-ChildItem -Path $SourceDirectories.Private -File -Filter "*.ps1" | ForEach-Object {
+        Write-Verbose "Adding private function from '$($_.FullName)'"
+        $FunctionContent = Get-Content -Path $_.FullName -Raw
+        "$FunctionContent`n" | Add-Content -Path $OutputModuleFilePath -Force
+    }
+
+    # Process public functions (exported functions)
+    Get-ChildItem -Path $SourceDirectories.Public -File -Filter "*.ps1" | ForEach-Object {
+        $FunctionName = $_.BaseName
+        $PublicFunctionNames += $FunctionName
+        
+        Write-Verbose "Adding public function '$FunctionName' from '$($_.FullName)'"
+        $FunctionContent = Get-Content -Path $_.FullName -Raw
+        
+        # Add the function content to the module
+        "$FunctionContent`n" | Add-Content -Path $OutputModuleFilePath -Force
+        
+        # Extract aliases from Set-Alias commands
+        $SetAliasMatches = [regex]::Matches($FunctionContent, "Set-Alias\s+[`"'-]?([^`"'\s]+)[`"'-]?\s+[`"'-]?$FunctionName[`"'-]?", "IgnoreCase")
+        foreach ($Match in $SetAliasMatches) {
+            $AliasName = $Match.Groups[1].Value
+            $AliasesToExport += $AliasName
+            Write-Verbose "Creating alias '$AliasName' for function '$FunctionName'"
+            "New-Alias -Name '$AliasName' -Value '$FunctionName' -Force`n" | Add-Content -Path $OutputModuleFilePath -Force
+        }
+        
+        # Extract aliases from [Alias()] attributes
+        $AttributeAliasMatches = [regex]::Matches($FunctionContent, "\[Alias\([`"']([^`"']+)[`"']\)\]", "IgnoreCase")
+        foreach ($Match in $AttributeAliasMatches) {
+            $AliasName = $Match.Groups[1].Value
+            $AliasesToExport += $AliasName
+            Write-Verbose "Creating alias '$AliasName' for function '$FunctionName' (from [Alias] attribute)"
+            "New-Alias -Name '$AliasName' -Value '$FunctionName' -Force`n" | Add-Content -Path $OutputModuleFilePath -Force
+        }
+    }
+
+    # Remove duplicate aliases
+    $AliasesToExport = $AliasesToExport | Sort-Object -Unique
+    #endregion
+
+    #region Module Exports
+    Write-Verbose "Adding Export-ModuleMember statements"
+
+    # Export public functions
+    if ($PublicFunctionNames.Count -gt 0) {
+        $FunctionExportString = $PublicFunctionNames -join ", "
+        "Export-ModuleMember -Function $FunctionExportString`n" | Add-Content -Path $OutputModuleFilePath -Force
+        Write-Verbose "Exporting functions: '$FunctionExportString'"
+    }
+
+    # Export aliases
+    if ($AliasesToExport.Count -gt 0) {
+        $AliasExportString = $AliasesToExport -join "', '"
+        "Export-ModuleMember -Alias '$AliasExportString'`n" | Add-Content -Path $OutputModuleFilePath -Force
+        Write-Verbose "Exporting aliases: '$($AliasesToExport -join ", ")'"
+    }
+    #endregion
+    #endregion
+
+    Write-Verbose "$Mode operation completed successfully. Output: '$ModuleOutputPath'"
+}
+#endregion
