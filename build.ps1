@@ -175,4 +175,6 @@ if ($Mode -in @("Build", "Ship")) {
             $destinationPath = $_.FullName -replace [regex]::Escape($PSScriptRoot), $moduleOutputPath
             Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Verbose:$verbosePreference
         }
+
+    # Module psm1 build
 }
