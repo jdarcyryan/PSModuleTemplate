@@ -31,6 +31,11 @@
     
     Builds the module with proper versioning for release to PowerShell Gallery or distribution.
 
+.EXAMPLE
+    .\Build.ps1 -Mode Build -Verbose
+    
+    Builds the module with verbose output showing detailed progress information.
+
 .NOTES
     Author: James D'Arcy Ryan
     
