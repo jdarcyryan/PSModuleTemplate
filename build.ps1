@@ -56,8 +56,8 @@ $moduleName = Get-Item $PSScriptRoot | % Name
 $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$moduleName.psd1"
 
 # Manifest template creation
-if (Test-Path -Path $manifestPath -ItemType Leaf) {}
-elseif (Test-Path -Path $manifestPath -ItemType Container) {
+if (Test-Path -Path $manifestPath -PathType Leaf) {}
+elseif (Test-Path -Path $manifestPath -PathType Container) {
     throw "The path '$manifestPath' is a directory, not a file."
 }
 else {
