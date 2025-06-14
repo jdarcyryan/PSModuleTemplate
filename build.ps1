@@ -37,6 +37,7 @@
 .LINK
     https://github.com/jdarcyryan/PSModuleTemplate
 #>
+[CmdLetBinding()]
 param(
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -56,12 +57,15 @@ $moduleName = Get-Item $PSScriptRoot | % Name
 $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath "$moduleName.psd1"
 
 # Manifest template creation
-if (Test-Path -Path $manifestPath -PathType Leaf) {}
+if (Test-Path -Path $manifestPath -PathType Leaf) {
+    Write-Verbose "Module manifest found, skipping creation."
+}
 elseif (Test-Path -Path $manifestPath -PathType Container) {
     throw "The path '$manifestPath' is a directory, not a file."
 }
 else {
     New-ModuleManifest -Path $manifestPath -RootModule "$moduleName.psm1" -ModuleVersion "1.0.0"
+    Write-Verbose "Module manifest created at root\$moduleName.psd1"
 }
 
 # Build module psm1
