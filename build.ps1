@@ -190,20 +190,31 @@ if ($Mode -in @("Build", "Ship")) {
 
     $classesToImport | foreach {
         Write-Verbose "Attempting to import class file: $($_.FullName)"
+
         if ($_.Extension -eq ".ps1") { # standard PowerShell class
-            $null
+            Write-Verbose "Adding PowerShell class from '$($_.FullName)'"
+            "$(Get-Content -Path $_.FullName -Raw)`n" | Add-Content -Path $outputModulePath -Force
         }
-        elseif ($_.Extension -eq ".cs") { # C# class
-            $null
-        }
-        elseif ($_.Extension -eq ".js") { # JavaScript class
-            $null
-        }
-        elseif ($_.Extension -eq ".vb") { # Visual Basic class
-            $null
+        elseif ($_.Extension -in @(".cs", ".js", ".vb")) { # C#, JavaScript or Visal Basic class
+            switch ($_.Extension) {
+                ".cs" { $classType = "CSharp" }
+                ".js" { $classType = "JavaScript" }
+                ".vb" { $classType = "VisualBasic" }
+            }
+
+            Write-Verbose "Adding $classType class from '$($_.FullName)'"
+            "Add-Type -Path `"`$PSScriptRoot\$($_.Name)`" -TypeDefinition `"$classType`"`n" | Add-Content -Path $outputModulePath -Force
         }
         else { # if unsupported class file type
             throw "Unsupported class file '$($_.FullName)', supported extensions are .ps1, .cs, .js, .vb"
         }
+    }
+
+    # Functions
+    Write-Verbose "Adding functions from '$publicFunctionsPath' and '$privateFunctionsPath'"
+
+    $privateFunctionsPath, $publicFunctionsPath | Get-ChildItem -File | ? Extension -eq ".ps1" | foreach {
+        Write-Verbose "Adding function from '$($_.FullName)'"
+        "$(Get-Content -Path $_.FullName -Raw)`n" | Add-Content -Path $outputModulePath -Force
     }
 }
