@@ -195,26 +195,75 @@ if ($Mode -in @("Build", "Ship")) {
             Write-Verbose "Adding PowerShell class from '$($_.FullName)'"
             "$(Get-Content -Path $_.FullName -Raw)`n" | Add-Content -Path $outputModulePath -Force
         }
-        elseif ($_.Extension -in @(".cs", ".js", ".vb")) { # C#, JavaScript or Visal Basic class
+        elseif ($_.Extension -in @(".cs", ".vb")) { # C#, JavaScript or Visal Basic class
             switch ($_.Extension) {
                 ".cs" { $classType = "CSharp" }
-                ".js" { $classType = "JavaScript" }
                 ".vb" { $classType = "VisualBasic" }
             }
 
             Write-Verbose "Adding $classType class from '$($_.FullName)'"
-            "Add-Type -Path `"`$PSScriptRoot\$($_.Name)`" -TypeDefinition `"$classType`"`n" | Add-Content -Path $outputModulePath -Force
+            "Add-Type -Path `"`$PSScriptRoot\$($_.Name)`"`n" | Add-Content -Path $outputModulePath -Force
         }
         else { # if unsupported class file type
-            throw "Unsupported class file '$($_.FullName)', supported extensions are .ps1, .cs, .js, .vb"
+            throw "Unsupported class file '$($_.FullName)', supported extensions are .ps1, .cs, .vb"
         }
     }
 
     # Functions
     Write-Verbose "Adding functions from '$publicFunctionsPath' and '$privateFunctionsPath'"
 
-    $privateFunctionsPath, $publicFunctionsPath | Get-ChildItem -File | ? Extension -eq ".ps1" | foreach {
-        Write-Verbose "Adding function from '$($_.FullName)'"
+    $publicFunctionNames = @()
+    $aliasesToExport = @()
+
+    # Process private functions first
+    Get-ChildItem -Path $privateFunctionsPath -File | Where-Object { $_.Extension -eq ".ps1" } | ForEach-Object {
+        Write-Verbose "Adding private function from '$($_.FullName)'"
         "$(Get-Content -Path $_.FullName -Raw)`n" | Add-Content -Path $outputModulePath -Force
+    }
+
+    # Process public functions
+    Get-ChildItem -Path $publicFunctionsPath -File | Where-Object { $_.Extension -eq ".ps1" } | ForEach-Object {
+        $functionName = $_.BaseName
+        $publicFunctionNames += $functionName
+        
+        Write-Verbose "Adding public function from '$($_.FullName)'"
+        $functionContent = Get-Content -Path $_.FullName -Raw
+        
+        # Add the function content
+        "$functionContent`n" | Add-Content -Path $outputModulePath -Force
+        
+        # Look for Set-Alias commands and convert them to New-Alias
+        $aliasMatches = [regex]::Matches($functionContent, "Set-Alias\s+[`"'-]?([^`"'\s]+)[`"'-]?\s+[`"'-]?$functionName[`"'-]?", "IgnoreCase")
+        foreach ($match in $aliasMatches) {
+            $aliasName = $match.Groups[1].Value
+            $aliasesToExport += $aliasName
+            Write-Verbose "Creating alias '$aliasName' for function '$functionName'"
+            "New-Alias -Name '$aliasName' -Value '$functionName' -Force`n" | Add-Content -Path $outputModulePath -Force
+        }
+        
+        # Look for [Alias()] attributes and create New-Alias commands
+        $attributeMatches = [regex]::Matches($functionContent, "\[Alias\([`"']([^`"']+)[`"']\)\]", "IgnoreCase")
+        foreach ($match in $attributeMatches) {
+            $aliasName = $match.Groups[1].Value
+            $aliasesToExport += $aliasName
+            Write-Verbose "Creating alias '$aliasName' for function '$functionName' (from [Alias] attribute)"
+            "New-Alias -Name '$aliasName' -Value '$functionName' -Force`n" | Add-Content -Path $outputModulePath -Force
+        }
+    }
+
+    # Remove duplicates
+    $aliasesToExport = $aliasesToExport | Sort-Object -Unique
+
+    # Export public functions and aliases
+    Write-Verbose "Adding Export-ModuleMember statements"
+
+    if ($publicFunctionNames.Count -gt 0) {
+        "Export-ModuleMember -Function $($publicFunctionNames -join ", ")`n" | Add-Content -Path $outputModulePath -Force
+        Write-Verbose "Exporting functions: $($publicFunctionNames -join ", ")"
+    }
+
+    if ($aliasesToExport.Count -gt 0) {
+        "Export-ModuleMember -Alias $($aliasesToExport -join "', '")`n" | Add-Content -Path $outputModulePath -Force
+        Write-Verbose "Exporting aliases: $($aliasesToExport -join ", ")"
     }
 }
