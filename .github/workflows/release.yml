@@ -205,49 +205,6 @@ jobs:
           Write-Host "Created archive: $ArchiveName" -ForegroundColor Green
           "ARCHIVE_NAME=$ArchiveName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Generate Release Notes
-        id: release_notes
-        shell: pwsh
-        run: |
-          Write-Host "Generating release notes..." -ForegroundColor Cyan
-          
-          $CurrentVersion = "${{ steps.version.outputs.NEW_VERSION }}"
-          $VersionBump = "${{ steps.version.outputs.VERSION_BUMP }}"
-          
-          # Get commits since last release
-          $PreviousTag = git describe --tags --abbrev=0 2>$null
-          $CommitRange = if ($PreviousTag) { "$PreviousTag..HEAD" } else { "HEAD" }
-          $Commits = git log $CommitRange --pretty=format:"- %s (%h)" --no-merges
-          
-          $ReleaseNotes = @"
-          # Release v$CurrentVersion
-          
-          This is a **$VersionBump** version bump.
-          
-          ## Changes
-          $($Commits -join "`n")
-          
-          ## Installation
-          
-          ### From PowerShell Gallery (Coming Soon)
-          ``````powershell
-          Install-Module -Name $((Get-Item $PWD).Name) -RequiredVersion $CurrentVersion
-          ``````
-          
-          ### Manual Installation
-          1. Download the attached zip file
-          2. Extract to your PowerShell modules directory
-          3. Import the module: ``Import-Module $((Get-Item $PWD).Name)``
-          
-          ---
-          *Generated automatically by GitHub Actions*
-          "@
-          
-          # Save to file for upload
-          $ReleaseNotes | Out-File -FilePath "RELEASE_NOTES.md" -Encoding UTF8
-          
-          Write-Host "Release notes generated" -ForegroundColor Green
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
