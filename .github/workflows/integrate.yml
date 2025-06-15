@@ -57,8 +57,8 @@ jobs:
           }
           
           # Check for build script
-          if (-not (Test-Path "Build.ps1")) {
-              Write-Error "Build.ps1 script not found"
+          if (-not (Test-Path "build.ps1")) {
+              Write-Error "build.ps1 script not found"
               exit 1
           } else {
               Write-Host "✓ Build script found" -ForegroundColor Green
@@ -70,7 +70,7 @@ jobs:
           Write-Host "Starting integration build..." -ForegroundColor Cyan
           
           # Execute build script in Build mode
-          .\Build.ps1 -Mode Build -Verbose
+          .\build.ps1 -Mode Build -Verbose
           
           Write-Host "Integration build completed successfully!" -ForegroundColor Green
 

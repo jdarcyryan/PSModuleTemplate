@@ -153,7 +153,7 @@ jobs:
           Write-Host "Target version: $env:PSModuleVersion" -ForegroundColor Green
           
           # Execute build script in Ship mode
-          .\Build.ps1 -Mode Ship -Verbose
+          .\build.ps1 -Mode Ship -Verbose
           
           Write-Host "Release build completed successfully!" -ForegroundColor Green
 
