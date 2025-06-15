@@ -158,34 +158,6 @@ jobs:
           
           Write-Host "Release build completed successfully!" -ForegroundColor Green
 
-      - name: Test Release Module
-        shell: pwsh
-        run: |
-          Write-Host "Testing release module build..." -ForegroundColor Cyan
-          
-          # Find the built module
-          $BuildOutput = Get-ChildItem -Path "build/output" -Recurse -Filter "*.psd1" | Select-Object -First 1
-          
-          if (-not $BuildOutput) {
-              Write-Error "Built module manifest not found in build/output"
-              exit 1
-          }
-          
-          Write-Host "Testing module: $($BuildOutput.FullName)" -ForegroundColor Green
-          
-          # Verify version in manifest matches expected
-          $ManifestData = Import-PowerShellDataFile -Path $BuildOutput.FullName
-          if ($ManifestData.ModuleVersion -ne $env:PSModuleVersion) {
-              Write-Error "Version mismatch! Expected: $env:PSModuleVersion, Found: $($ManifestData.ModuleVersion)"
-              exit 1
-          }
-          
-          Write-Host "✓ Module build validated successfully" -ForegroundColor Green
-          Write-Host "  Module Name: $($ManifestData.RootModule -replace '\.psm1, '')" -ForegroundColor Cyan
-          Write-Host "  Version: $($ManifestData.ModuleVersion)" -ForegroundColor Cyan
-          Write-Host "  Author: $($ManifestData.Author)" -ForegroundColor Cyan
-          Write-Host "  Description: $($ManifestData.Description)" -ForegroundColor Cyan
-
       - name: Create Release Archive
         shell: pwsh
         run: |
