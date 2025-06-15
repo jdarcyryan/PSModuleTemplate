@@ -31,7 +31,7 @@ jobs:
     name: Build and Release Module
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/dotnet/sdk:8.0
+      image: mcr.microsoft.com/powershell:7.4-ubuntu-22.04
     
     steps:
       - name: Checkout Repository
@@ -40,20 +40,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install PowerShell 7
+      - name: Verify PowerShell Installation
+        shell: pwsh
         run: |
-          echo "Installing PowerShell 7 using dotnet tool..."
+          Write-Host "PowerShell Version Information:" -ForegroundColor Green
+          $PSVersionTable
           
-          # Install PowerShell as a global dotnet tool
-          dotnet tool install --global PowerShell
-          
-          # Add dotnet tools to PATH if not already there
-          export PATH="$PATH:/root/.dotnet/tools"
-          echo "/root/.dotnet/tools" >> $GITHUB_PATH
-          
-          # Verify installation
-          pwsh --version
-          echo "PowerShell 7 installation completed successfully"
+          Write-Host "`nPowerShell executable location:" -ForegroundColor Green
+          Get-Command pwsh | Select-Object Source, Version
 
       - name: Determine Version
         id: version
