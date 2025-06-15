@@ -15,6 +15,27 @@ A modern PowerShell module template with automated building and releasing via Gi
 - 🔧 **Build System**: Flexible build script supporting multiple modes (Build, Setup, Ship)
 - 📦 **Release Automation**: Automatic GitHub releases with downloadable artifacts
 - 🎯 **Zero Configuration**: Works out of the box with sensible defaults
+- 💡 **Multi-Language Class Support**: Allows for C# and Visual Basic classes to be easily integrated
+
+![C#](https://img.shields.io/badge/C%23-239120?style=flat&logo=unity&logoColor=white)
+![Visual Basic](https://img.shields.io/badge/-Visual%20Basic-blueviolet?logo=dotnet)
+```
+YourModule/
+├── classes/
+│   ├── classes.psd1
+│   ├── ConfigurationManager.ps1
+│   ├── MathHelper.cs
+│   ├── StringUtilities.vb
+```
+**YourModule\classes\classes.psd1**
+```powershell
+@{
+    classes = @(
+        ,'MathHelper.cs' # C# class file
+        ,'StringUtilities.vb' # Visual Basic class file
+        ,'ConfigurationManager.ps1' # Standard PowerShell class
+}
+```
 
 ## 📋 Prerequisites
 
@@ -170,14 +191,6 @@ For automatic version bumping, use these conventions in your commit messages:
 ## 📄 License
 
 This template is provided as-is. Remember to add your own LICENSE file for your module.
-
-## 🤝 Contributing
-
-To contribute to this template:
-1. 🍴 Fork the repository
-2. 🌿 Create a feature branch
-3. 💻 Make your changes
-4. 🚀 Submit a pull request
 
 ## 👤 Author
 
