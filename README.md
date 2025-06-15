@@ -192,14 +192,6 @@ For automatic version bumping, use these conventions in your commit messages:
 
 This template is provided as-is. Remember to add your own LICENSE file for your module.
 
-## 🤝 Contributing
-
-To contribute to this template:
-1. 🍴 Fork the repository
-2. 🌿 Create a feature branch
-3. 💻 Make your changes
-4. 🚀 Submit a pull request
-
 ## 👤 Author
 
 **James D'Arcy Ryan**
