@@ -197,7 +197,7 @@ if ($Mode -in @("Build", "Ship")) {
         }
     
     # Copy additional directories (excluding build and source directories)
-    $ExcludedDirectories = @("classes", "private", "public", "build")
+    $ExcludedDirectories = @("classes", "private", "public", "build", ".github")
     
     Get-ChildItem -Path $PSScriptRoot -Directory |
         Where-Object { $_.Name -notin $ExcludedDirectories } |
