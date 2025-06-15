@@ -186,7 +186,7 @@ if ($Mode -in @("Build", "Ship")) {
         }
 
     # Copy files from root directory (excluding manifest and build script)
-    $ExcludedRootFiles = @("$ModuleName.psd1", "build.ps1")
+    $ExcludedRootFiles = @("$ModuleName.psd1", "build.ps1", "CODEOWNERS")
     $ExcludedRootExtensions = @(".gitignore", ".gitkeep")
     
     Get-ChildItem -Path $PSScriptRoot -File |
