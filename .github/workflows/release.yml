@@ -51,6 +51,35 @@ jobs:
           Write-Host "`nPowerShell executable location:" -ForegroundColor Green
           Get-Command pwsh | Select-Object Source, Version
 
+      - name: Get Module Information
+        id: module_info
+        shell: pwsh
+        run: |
+          Write-Host "Getting module information..." -ForegroundColor Cyan
+          
+          # Find the module manifest file
+          $ManifestFile = Get-ChildItem -Path . -Filter "*.psd1" -Recurse | 
+                          Where-Object { $_.Directory.Name -ne 'build' } | 
+                          Select-Object -First 1
+          
+          if (-not $ManifestFile) {
+              Write-Error "No module manifest (.psd1) file found!"
+              exit 1
+          }
+          
+          Write-Host "Found manifest: $($ManifestFile.FullName)" -ForegroundColor Green
+          
+          # Import the manifest data
+          $ManifestData = Import-PowerShellDataFile -Path $ManifestFile.FullName
+          
+          # Get module name from manifest
+          $ModuleName = $ManifestFile.BaseName
+          Write-Host "Module name: $ModuleName" -ForegroundColor Green
+          
+          # Output module name for later steps
+          "MODULE_NAME=$ModuleName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "MODULE_NAME=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Determine Version
         id: version
         shell: pwsh
@@ -193,7 +222,8 @@ jobs:
         run: |
           Write-Host "Creating release archive..." -ForegroundColor Cyan
           
-          $ModuleName = (Get-Item $PWD).Name
+          # Use the module name from earlier step
+          $ModuleName = $env:MODULE_NAME
           $ArchiveName = "$ModuleName-v$env:PSModuleVersion.zip"
           
           # Create zip archive of only the build output contents
@@ -208,7 +238,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.NEW_VERSION }}
-          name: Release v${{ steps.version.outputs.NEW_VERSION }}
+          name: ${{ env.MODULE_NAME }} v${{ steps.version.outputs.NEW_VERSION }}
           draft: false
           prerelease: false
           files: |
