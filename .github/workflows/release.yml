@@ -41,21 +41,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Git
-        shell: pwsh
-        run: |
-          Write-Host "Installing Git..." -ForegroundColor Cyan
-          apt-get update
-          apt-get install -y git
-          Write-Host "Git installed successfully" -ForegroundColor Green
-
-      - name: Configure Git Safe Directory
-        shell: pwsh
-        run: |
-          Write-Host "Configuring Git safe directory..." -ForegroundColor Cyan
-          git config --global --add safe.directory $env:GITHUB_WORKSPACE
-          Write-Host "Git configuration complete" -ForegroundColor Green
-
       - name: Verify PowerShell Installation
         shell: pwsh
         run: |
@@ -77,9 +62,13 @@ jobs:
               'Accept' = 'application/vnd.github.v3+json'
           }
           
+          $CurrentVersion = "0.0.0"
+          $LatestReleaseTag = $null
+          
           try {
               $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/latest" -Headers $Headers
               $CurrentVersion = $LatestRelease.tag_name -replace '^v', ''
+              $LatestReleaseTag = $LatestRelease.tag_name
               Write-Host "Latest release found: $CurrentVersion" -ForegroundColor Green
           } catch {
               if ($_.Exception.Response.StatusCode -eq 404) {
@@ -108,26 +97,51 @@ jobs:
               if ($CurrentVersion -eq "0.0.0") {
                   $VersionBump = "major"  # First release
               } else {
-                  # Get commits since last release
-                  $CommitRange = if ($CurrentVersion -ne "0.0.0") { "v$CurrentVersion..HEAD" } else { "HEAD" }
-                  $Commits = git log $CommitRange --oneline
-                  
-                  Write-Host "Analyzing commits for version bump..." -ForegroundColor Cyan
-                  Write-Host "Commits since last release:" -ForegroundColor Yellow
-                  $Commits | ForEach-Object { Write-Host "  $_" }
-                  
-                  # Simple heuristic for version bumping
-                  $CommitMessages = $Commits -join " "
-                  
-                  if ($CommitMessages -match '(?i)(breaking|major|!:|BREAKING CHANGE)') {
-                      $VersionBump = "major"
-                      Write-Host "Detected breaking changes - major version bump" -ForegroundColor Red
-                  } elseif ($CommitMessages -match '(?i)(feat|feature|add|new)') {
-                      $VersionBump = "minor" 
-                      Write-Host "Detected new features - minor version bump" -ForegroundColor Blue
-                  } else {
+                  # Use GitHub API to get commits since last release
+                  try {
+                      $CommitsUrl = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/commits?sha=$env:GITHUB_SHA"
+                      if ($LatestReleaseTag) {
+                          # Get the commit SHA for the latest release tag
+                          $TagUrl = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/git/refs/tags/$LatestReleaseTag"
+                          $TagRef = Invoke-RestMethod -Uri $TagUrl -Headers $Headers
+                          $ReleaseCommitSha = $TagRef.object.sha
+                          
+                          # Get commits between release and current
+                          $CompareUrl = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/compare/${ReleaseCommitSha}...${env:GITHUB_SHA}"
+                          $Comparison = Invoke-RestMethod -Uri $CompareUrl -Headers $Headers
+                          $Commits = $Comparison.commits
+                          
+                          Write-Host "Analyzing $($Commits.Count) commits for version bump..." -ForegroundColor Cyan
+                          
+                          if ($Commits.Count -gt 0) {
+                              Write-Host "Commits since last release:" -ForegroundColor Yellow
+                              $Commits | ForEach-Object { Write-Host "  $($_.commit.message.Split("`n")[0])" }
+                              
+                              # Analyze commit messages
+                              $CommitMessages = $Commits.commit.message -join " "
+                              
+                              if ($CommitMessages -match '(?i)(breaking|major|!:|BREAKING CHANGE)') {
+                                  $VersionBump = "major"
+                                  Write-Host "Detected breaking changes - major version bump" -ForegroundColor Red
+                              } elseif ($CommitMessages -match '(?i)(feat|feature|add|new)') {
+                                  $VersionBump = "minor" 
+                                  Write-Host "Detected new features - minor version bump" -ForegroundColor Blue
+                              } else {
+                                  $VersionBump = "patch"
+                                  Write-Host "Detected fixes/improvements - patch version bump" -ForegroundColor Green
+                              }
+                          } else {
+                              Write-Host "No new commits found, defaulting to patch version bump" -ForegroundColor Yellow
+                              $VersionBump = "patch"
+                          }
+                      } else {
+                          Write-Host "No previous release tag found, defaulting to patch version bump" -ForegroundColor Yellow
+                          $VersionBump = "patch"
+                      }
+                  } catch {
+                      Write-Host "Could not analyze commits via API, defaulting to patch version bump" -ForegroundColor Yellow
+                      Write-Host "Error: $_" -ForegroundColor Yellow
                       $VersionBump = "patch"
-                      Write-Host "Detected fixes/improvements - patch version bump" -ForegroundColor Green
                   }
               }
           }
