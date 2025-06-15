@@ -56,11 +56,6 @@ jobs:
         run: |
           Write-Host "Determining module version..." -ForegroundColor Cyan
           
-          # Get module name from current directory
-          $ModuleName = (Get-Item $PWD).Name
-          Write-Host "Module name: $ModuleName" -ForegroundColor Green
-          "MODULE_NAME=$ModuleName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          
           # Get latest release from GitHub API
           $Headers = @{
               'Authorization' = "token $env:GITHUB_TOKEN"
@@ -183,7 +178,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.NEW_VERSION }}
-          name: ${{ steps.version.outputs.MODULE_NAME }} v${{ steps.version.outputs.NEW_VERSION }}
+          name: Release v${{ steps.version.outputs.NEW_VERSION }}
           draft: false
           prerelease: false
           files: |
