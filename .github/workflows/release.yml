@@ -10,6 +10,7 @@ on:
       - '**/.gitignore'
       - '.gitignore'
       - 'LICENSE'
+      - 'CODEOWNERS'
   workflow_dispatch:
     inputs:
       version_bump:
