@@ -181,7 +181,10 @@ jobs:
           }
           
           Write-Host "✓ Module build validated successfully" -ForegroundColor Green
-          Write-Host "  Module Name: $($ManifestData.RootModule -replace '\.psm1
+          Write-Host "  Module Name: $($ManifestData.RootModule -replace '\.psm1, '')" -ForegroundColor Cyan
+          Write-Host "  Version: $($ManifestData.ModuleVersion)" -ForegroundColor Cyan
+          Write-Host "  Author: $($ManifestData.Author)" -ForegroundColor Cyan
+          Write-Host "  Description: $($ManifestData.Description)" -ForegroundColor Cyan
 
       - name: Create Release Archive
         shell: pwsh
@@ -236,38 +239,6 @@ jobs:
           $ReleaseNotes | Out-File -FilePath "RELEASE_NOTES.md" -Encoding UTF8
           
           Write-Host "Release notes generated" -ForegroundColor Green
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.version.outputs.NEW_VERSION }}
-          name: Release v${{ steps.version.outputs.NEW_VERSION }}
-          body_path: RELEASE_NOTES.md
-          draft: false
-          prerelease: false
-          files: |
-            ${{ env.ARCHIVE_NAME }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}, '')" -ForegroundColor Cyan
-          Write-Host "  Version: $($ManifestData.ModuleVersion)" -ForegroundColor Cyan
-          Write-Host "  Author: $($ManifestData.Author)" -ForegroundColor Cyan
-          Write-Host "  Description: $($ManifestData.Description)" -ForegroundColor Cyan
-
-      - name: Create Release Archive
-        shell: pwsh
-        run: |
-          Write-Host "Creating release archive..." -ForegroundColor Cyan
-          
-          $ModuleName = (Get-Item $PWD).Name
-          $ArchiveName = "$ModuleName-v$env:PSModuleVersion.zip"
-          
-          # Create zip archive of only the build output contents
-          Push-Location "build/output"
-          Compress-Archive -Path "*" -DestinationPath "../../$ArchiveName" -Force
-          Pop-Location
-          
-          Write-Host "Created archive: $ArchiveName" -ForegroundColor Green
-          "ARCHIVE_NAME=$ArchiveName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
