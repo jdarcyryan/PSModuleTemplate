@@ -1,0 +1,75 @@
+name: Integration Build
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+jobs:
+  integrate:
+    name: Build and Test Module
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/powershell:7.4-ubuntu-22.04
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify PowerShell Installation
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version Information:" -ForegroundColor Green
+          $PSVersionTable
+          
+          Write-Host "`nPowerShell executable location:" -ForegroundColor Green
+          Get-Command pwsh | Select-Object Source, Version
+
+      - name: Validate Module Structure
+        shell: pwsh
+        run: |
+          Write-Host "Validating module structure..." -ForegroundColor Green
+          
+          # Check required directories exist
+          $RequiredDirs = @('classes', 'private', 'public')
+          foreach ($Dir in $RequiredDirs) {
+              if (-not (Test-Path $Dir)) {
+                  Write-Warning "Directory '$Dir' not found"
+              } else {
+                  Write-Host "✓ Directory '$Dir' found" -ForegroundColor Green
+              }
+          }
+          
+          # Check for module manifest
+          $ManifestFiles = Get-ChildItem -Filter "*.psd1" -File
+          if ($ManifestFiles.Count -eq 0) {
+              Write-Error "No module manifest (.psd1) file found"
+              exit 1
+          } elseif ($ManifestFiles.Count -gt 1) {
+              Write-Warning "Multiple manifest files found: $($ManifestFiles.Name -join ', ')"
+          } else {
+              Write-Host "✓ Module manifest found: $($ManifestFiles[0].Name)" -ForegroundColor Green
+          }
+          
+          # Check for build script
+          if (-not (Test-Path "build.ps1")) {
+              Write-Error "build.ps1 script not found"
+              exit 1
+          } else {
+              Write-Host "✓ Build script found" -ForegroundColor Green
+          }
+
+      - name: Run Integration Build
+        shell: pwsh
+        run: |
+          Write-Host "Starting integration build..." -ForegroundColor Cyan
+          
+          # Execute build script in Build mode
+          .\build.ps1 -Mode Build -Verbose
+          
+          Write-Host "Integration build completed successfully!" -ForegroundColor Green

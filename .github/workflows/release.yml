@@ -1,0 +1,219 @@
+name: Release Module
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'
+          - 'patch'
+          - 'minor'
+          - 'major'
+
+permissions:
+  contents: write
+  releases: write
+
+jobs:
+  release:
+    name: Build and Release Module
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/powershell:7.4-ubuntu-22.04
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify PowerShell Installation
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version Information:" -ForegroundColor Green
+          $PSVersionTable
+          
+          Write-Host "`nPowerShell executable location:" -ForegroundColor Green
+          Get-Command pwsh | Select-Object Source, Version
+
+      - name: Determine Version
+        id: version
+        shell: pwsh
+        run: |
+          Write-Host "Determining module version..." -ForegroundColor Cyan
+          
+          # Get latest release from GitHub API
+          $Headers = @{
+              'Authorization' = "token $env:GITHUB_TOKEN"
+              'Accept' = 'application/vnd.github.v3+json'
+          }
+          
+          try {
+              $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/latest" -Headers $Headers
+              $CurrentVersion = $LatestRelease.tag_name -replace '^v', ''
+              Write-Host "Latest release found: $CurrentVersion" -ForegroundColor Green
+          } catch {
+              if ($_.Exception.Response.StatusCode -eq 404) {
+                  Write-Host "No releases found, starting with version 1.0.0" -ForegroundColor Yellow
+                  $CurrentVersion = "0.0.0"  # Will be bumped to 1.0.0
+              } else {
+                  Write-Error "Failed to get latest release: $_"
+                  exit 1
+              }
+          }
+          
+          # Parse current version
+          if ($CurrentVersion -match '^(\d+)\.(\d+)\.(\d+)') {
+              $Major = [int]$Matches[1]
+              $Minor = [int]$Matches[2] 
+              $Patch = [int]$Matches[3]
+          } else {
+              Write-Host "Invalid version format, defaulting to 0.0.0" -ForegroundColor Yellow
+              $Major = 0; $Minor = 0; $Patch = 0
+          }
+          
+          # Determine version bump type
+          $VersionBump = "${{ github.event.inputs.version_bump }}"
+          if ([string]::IsNullOrEmpty($VersionBump) -or $VersionBump -eq "auto") {
+              # Analyze commits since last release to determine bump type
+              if ($CurrentVersion -eq "0.0.0") {
+                  $VersionBump = "major"  # First release
+              } else {
+                  # Get commits since last release
+                  $CommitRange = if ($CurrentVersion -ne "0.0.0") { "v$CurrentVersion..HEAD" } else { "HEAD" }
+                  $Commits = git log $CommitRange --oneline
+                  
+                  Write-Host "Analyzing commits for version bump..." -ForegroundColor Cyan
+                  Write-Host "Commits since last release:" -ForegroundColor Yellow
+                  $Commits | ForEach-Object { Write-Host "  $_" }
+                  
+                  # Simple heuristic for version bumping
+                  $CommitMessages = $Commits -join " "
+                  
+                  if ($CommitMessages -match '(?i)(breaking|major|!:|BREAKING CHANGE)') {
+                      $VersionBump = "major"
+                      Write-Host "Detected breaking changes - major version bump" -ForegroundColor Red
+                  } elseif ($CommitMessages -match '(?i)(feat|feature|add|new)') {
+                      $VersionBump = "minor" 
+                      Write-Host "Detected new features - minor version bump" -ForegroundColor Blue
+                  } else {
+                      $VersionBump = "patch"
+                      Write-Host "Detected fixes/improvements - patch version bump" -ForegroundColor Green
+                  }
+              }
+          }
+          
+          # Calculate new version
+          switch ($VersionBump) {
+              "major" { 
+                  $Major++; $Minor = 0; $Patch = 0 
+                  Write-Host "Performing major version bump" -ForegroundColor Red
+              }
+              "minor" { 
+                  $Minor++; $Patch = 0 
+                  Write-Host "Performing minor version bump" -ForegroundColor Blue
+              }
+              "patch" { 
+                  $Patch++ 
+                  Write-Host "Performing patch version bump" -ForegroundColor Green
+              }
+              default {
+                  Write-Error "Invalid version bump type: $VersionBump"
+                  exit 1
+              }
+          }
+          
+          $NewVersion = "$Major.$Minor.$Patch"
+          Write-Host "New version will be: $NewVersion" -ForegroundColor Cyan
+          
+          # Set environment variables
+          "PSModuleVersion=$NewVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "NEW_VERSION=$NewVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "VERSION_BUMP=$VersionBump" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Release Module
+        shell: pwsh
+        run: |
+          Write-Host "Building module for release..." -ForegroundColor Cyan
+          Write-Host "Target version: $env:PSModuleVersion" -ForegroundColor Green
+          
+          # Execute build script in Ship mode
+          .\build.ps1 -Mode Ship -Verbose
+          
+          Write-Host "Release build completed successfully!" -ForegroundColor Green
+
+      - name: Test Release Module
+        shell: pwsh
+        run: |
+          Write-Host "Testing release module..." -ForegroundColor Cyan
+          
+          # Find the built module
+          $BuildOutput = Get-ChildItem -Path "build/output" -Recurse -Filter "*.psd1" | Select-Object -First 1
+          
+          if (-not $BuildOutput) {
+              Write-Error "Built module manifest not found in build/output"
+              exit 1
+          }
+          
+          Write-Host "Testing module: $($BuildOutput.FullName)" -ForegroundColor Green
+          
+          # Verify version in manifest matches expected
+          $ManifestData = Import-PowerShellDataFile -Path $BuildOutput.FullName
+          if ($ManifestData.ModuleVersion -ne $env:PSModuleVersion) {
+              Write-Error "Version mismatch! Expected: $env:PSModuleVersion, Found: $($ManifestData.ModuleVersion)"
+              exit 1
+          }
+          
+          # Test import
+          Import-Module $BuildOutput.FullName -Force
+          $ModuleInfo = Get-Module -Name $BuildOutput.BaseName
+          
+          Write-Host "✓ Module imported successfully" -ForegroundColor Green
+          Write-Host "  Name: $($ModuleInfo.Name)" -ForegroundColor Cyan
+          Write-Host "  Version: $($ModuleInfo.Version)" -ForegroundColor Cyan
+          Write-Host "  Functions: $($ModuleInfo.ExportedFunctions.Count)" -ForegroundColor Cyan
+          Write-Host "  Aliases: $($ModuleInfo.ExportedAliases.Count)" -ForegroundColor Cyan
+
+      - name: Create Release Archive
+        shell: pwsh
+        run: |
+          Write-Host "Creating release archive..." -ForegroundColor Cyan
+          
+          $ModuleName = (Get-Item $PWD).Name
+          $ArchiveName = "$ModuleName-v$env:PSModuleVersion.zip"
+          
+          # Create zip archive of only the build output contents
+          Push-Location "build/output"
+          Compress-Archive -Path "*" -DestinationPath "../../$ArchiveName" -Force
+          Pop-Location
+          
+          Write-Host "Created archive: $ArchiveName" -ForegroundColor Green
+          "ARCHIVE_NAME=$ArchiveName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.NEW_VERSION }}
+          name: Release v${{ steps.version.outputs.NEW_VERSION }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.ARCHIVE_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
