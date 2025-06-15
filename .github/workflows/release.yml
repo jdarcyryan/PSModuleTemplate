@@ -27,6 +27,7 @@ on:
 permissions:
   contents: write
   actions: write
+  packages: write
 
 jobs:
   release:
@@ -234,14 +235,117 @@ jobs:
           Write-Host "Created archive: $ArchiveName" -ForegroundColor Green
           "ARCHIVE_NAME=$ArchiveName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Create NuGet Package
+        shell: pwsh
+        run: |
+          Write-Host "Creating NuGet package..." -ForegroundColor Cyan
+          
+          # Install NuGet provider if not present
+          if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+              Write-Host "Installing NuGet provider..." -ForegroundColor Yellow
+              Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+          }
+          
+          # Register PSGallery if not already registered
+          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+              Write-Host "Registering PSGallery repository..." -ForegroundColor Yellow
+              Register-PSRepository -Default
+          }
+          
+          # Create a temporary directory for the package
+          $TempPackageDir = New-Item -ItemType Directory -Path "temp_package" -Force
+          
+          # Copy module files to temp directory
+          Copy-Item -Path "build/output/*" -Destination $TempPackageDir -Recurse -Force
+          
+          # Create the NuGet package
+          $NupkgPath = "$env:MODULE_NAME.$env:PSModuleVersion.nupkg"
+          
+          Write-Host "Building NuGet package: $NupkgPath" -ForegroundColor Green
+          
+          # Create .nuspec file
+          $NuspecContent = @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+            <metadata>
+              <id>$env:MODULE_NAME</id>
+              <version>$env:PSModuleVersion</version>
+              <authors>$env:GITHUB_REPOSITORY_OWNER</authors>
+              <owners>$env:GITHUB_REPOSITORY_OWNER</owners>
+              <requireLicenseAcceptance>false</requireLicenseAcceptance>
+              <description>PowerShell module $env:MODULE_NAME</description>
+              <releaseNotes>See https://github.com/$env:GITHUB_REPOSITORY/releases/tag/v$env:PSModuleVersion</releaseNotes>
+              <copyright>Copyright (c) $((Get-Date).Year) $env:GITHUB_REPOSITORY_OWNER</copyright>
+              <repository type="git" url="https://github.com/$env:GITHUB_REPOSITORY.git" />
+            </metadata>
+          </package>
+          "@
+          
+          $NuspecPath = Join-Path $TempPackageDir "$env:MODULE_NAME.nuspec"
+          $NuspecContent | Out-File -FilePath $NuspecPath -Encoding UTF8
+          
+          # Use Compress-Archive to create the nupkg (which is just a zip file)
+          Compress-Archive -Path "$TempPackageDir/*" -DestinationPath $NupkgPath -Force
+          
+          Write-Host "NuGet package created: $NupkgPath" -ForegroundColor Green
+          
+          # Set package path for next steps
+          "NUPKG_PATH=$NupkgPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Publish to GitHub Packages
+        shell: pwsh
+        run: |
+          Write-Host "Publishing to GitHub Packages..." -ForegroundColor Cyan
+          
+          # Configure NuGet source for GitHub Packages
+          $SourceUrl = "https://nuget.pkg.github.com/$env:GITHUB_REPOSITORY_OWNER/index.json"
+          
+          # Install dotnet CLI if not present
+          if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+              Write-Host "Installing .NET SDK..." -ForegroundColor Yellow
+              apt-get update
+              apt-get install -y dotnet-sdk-6.0
+          }
+          
+          # Add GitHub Packages as a source
+          Write-Host "Adding GitHub Packages source..." -ForegroundColor Yellow
+          dotnet nuget add source $SourceUrl --name github --username $env:GITHUB_REPOSITORY_OWNER --password $env:GITHUB_TOKEN --store-password-in-clear-text
+          
+          # Push the package
+          Write-Host "Pushing package to GitHub Packages..." -ForegroundColor Green
+          dotnet nuget push $env:NUPKG_PATH --api-key $env:GITHUB_TOKEN --source github --skip-duplicate
+          
+          Write-Host "Package published successfully!" -ForegroundColor Green
+          Write-Host "Package URL: https://github.com/$env:GITHUB_REPOSITORY/packages" -ForegroundColor Cyan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.NEW_VERSION }}
           name: ${{ env.MODULE_NAME }} v${{ steps.version.outputs.NEW_VERSION }}
+          body: |
+            ## 📦 Installation
+            
+            ### From GitHub Packages
+            ```powershell
+            # Register GitHub Packages source (one-time setup)
+            Register-PSResourceRepository -Name GitHub -Uri https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+            
+            # Install the module
+            Install-PSResource -Name ${{ env.MODULE_NAME }} -Repository GitHub -Version ${{ steps.version.outputs.NEW_VERSION }}
+            ```
+            
+            ### Manual Installation
+            Download the attached zip file and extract to your PowerShell modules directory.
+            
+            ---
+            *This release was automatically generated by GitHub Actions*
           draft: false
           prerelease: false
           files: |
             ${{ env.ARCHIVE_NAME }}
+            ${{ env.NUPKG_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
