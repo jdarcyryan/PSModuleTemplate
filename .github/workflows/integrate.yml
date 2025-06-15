@@ -1,0 +1,127 @@
+name: Integration Build
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+jobs:
+  integrate:
+    name: Build and Test Module
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:8.0
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install PowerShell 7
+        run: |
+          echo "Installing PowerShell 7..."
+          
+          # Update package lists
+          apt-get update
+          
+          # Install dependencies
+          apt-get install -y wget apt-transport-https software-properties-common
+          
+          # Download and install PowerShell
+          wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+          dpkg -i packages-microsoft-prod.deb
+          apt-get update
+          apt-get install -y powershell
+          
+          # Verify installation
+          pwsh --version
+
+      - name: Validate Module Structure
+        shell: pwsh
+        run: |
+          Write-Host "Validating module structure..." -ForegroundColor Green
+          
+          # Check required directories exist
+          $RequiredDirs = @('classes', 'private', 'public')
+          foreach ($Dir in $RequiredDirs) {
+              if (-not (Test-Path $Dir)) {
+                  Write-Warning "Directory '$Dir' not found"
+              } else {
+                  Write-Host "✓ Directory '$Dir' found" -ForegroundColor Green
+              }
+          }
+          
+          # Check for module manifest
+          $ManifestFiles = Get-ChildItem -Filter "*.psd1" -File
+          if ($ManifestFiles.Count -eq 0) {
+              Write-Error "No module manifest (.psd1) file found"
+              exit 1
+          } elseif ($ManifestFiles.Count -gt 1) {
+              Write-Warning "Multiple manifest files found: $($ManifestFiles.Name -join ', ')"
+          } else {
+              Write-Host "✓ Module manifest found: $($ManifestFiles[0].Name)" -ForegroundColor Green
+          }
+          
+          # Check for build script
+          if (-not (Test-Path "Build.ps1")) {
+              Write-Error "Build.ps1 script not found"
+              exit 1
+          } else {
+              Write-Host "✓ Build script found" -ForegroundColor Green
+          }
+
+      - name: Run Integration Build
+        shell: pwsh
+        run: |
+          Write-Host "Starting integration build..." -ForegroundColor Cyan
+          
+          # Execute build script in Build mode
+          .\Build.ps1 -Mode Build -Verbose
+          
+          Write-Host "Integration build completed successfully!" -ForegroundColor Green
+
+      - name: Test Module Import
+        shell: pwsh
+        run: |
+          Write-Host "Testing module import..." -ForegroundColor Cyan
+          
+          # Find the built module
+          $BuildOutput = Get-ChildItem -Path "build/output" -Recurse -Filter "*.psd1" | Select-Object -First 1
+          
+          if (-not $BuildOutput) {
+              Write-Error "Built module manifest not found in build/output"
+              exit 1
+          }
+          
+          Write-Host "Found built module: $($BuildOutput.FullName)" -ForegroundColor Green
+          
+          # Test import
+          try {
+              Import-Module $BuildOutput.FullName -Force -Verbose
+              Write-Host "✓ Module imported successfully" -ForegroundColor Green
+              
+              # Get module info
+              $ModuleInfo = Get-Module -Name $BuildOutput.BaseName
+              Write-Host "Module: $($ModuleInfo.Name)" -ForegroundColor Cyan
+              Write-Host "Version: $($ModuleInfo.Version)" -ForegroundColor Cyan
+              Write-Host "Exported Functions: $($ModuleInfo.ExportedFunctions.Count)" -ForegroundColor Cyan
+              Write-Host "Exported Aliases: $($ModuleInfo.ExportedAliases.Count)" -ForegroundColor Cyan
+              
+              if ($ModuleInfo.ExportedFunctions.Count -gt 0) {
+                  Write-Host "Functions:" -ForegroundColor Yellow
+                  $ModuleInfo.ExportedFunctions.Keys | ForEach-Object { Write-Host "  - $_" }
+              }
+              
+              if ($ModuleInfo.ExportedAliases.Count -gt 0) {
+                  Write-Host "Aliases:" -ForegroundColor Yellow
+                  $ModuleInfo.ExportedAliases.Keys | ForEach-Object { Write-Host "  - $_" }
+              }
+              
+          } catch {
+              Write-Error "Failed to import module: $_"
+              exit 1
+          }
