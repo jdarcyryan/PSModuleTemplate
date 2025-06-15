@@ -41,6 +41,21 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install Git
+        shell: pwsh
+        run: |
+          Write-Host "Installing Git..." -ForegroundColor Cyan
+          apt-get update
+          apt-get install -y git
+          Write-Host "Git installed successfully" -ForegroundColor Green
+
+      - name: Configure Git Safe Directory
+        shell: pwsh
+        run: |
+          Write-Host "Configuring Git safe directory..." -ForegroundColor Cyan
+          git config --global --add safe.directory $env:GITHUB_WORKSPACE
+          Write-Host "Git configuration complete" -ForegroundColor Green
+
       - name: Verify PowerShell Installation
         shell: pwsh
         run: |
