@@ -30,23 +30,23 @@ function New-PSModule {
     }
 
     $templateFolderPath = Resolve-Path -Path "$PSScriptRoot\..\template"
-    $templateModuleFilePath = "$templateFolderPath\Template.psd1"
+    $templateModuleFilePath = "$templateFolderPath\Template.psm1"
     $gitRoot = Resolve-Path -Path "$PSScriptRoot\..\.."
     $moduleName = Split-Path -Path $gitRoot -Leaf
 
     $modulePath = "$gitRoot\$moduleName"
-    $moduleFilePath = "$modulePath\$moduleName.psd1"
+    $moduleFilePath = "$modulePath\$moduleName.psm1"
 
     if (!(Test-Path -Path $modulePath -PathType Container)) {
         New-Item -Path $modulePath -ItemType Directory > $null
     }
 
-    # Copy everything except Template.psd1
+    # Copy everything except Template.psm1
     Get-ChildItem -Path $templateFolderPath | 
-        where Name -ne 'Template.psd1' | 
+        where Name -ne 'Template.psm1' | 
         Copy-Item -Destination $modulePath -Recurse
 
-    # Copy and rename Template.psd1
+    # Copy and rename Template.psm1
     Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath
 }
 
