@@ -1,21 +1,16 @@
-name: Release Module
+name: Integration Tests
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - '**.psd1'
-      - '!**/classes.psd1'
+  pull_request:
   workflow_dispatch:
 
 permissions:
-  actions: write
-  packages: write
-  contents: write
+  actions: read
+  packages: read
+  contents: read
 
 jobs:
-  release-module:
+  integration-tests:
     runs-on: windows-latest
     
     env:
