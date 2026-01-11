@@ -13,6 +13,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Pre-import PackageManagement to avoid verbose output during build
+Import-Module -Name PackageManagement -Force -Verbose:$false -WarningAction SilentlyContinue *>$null
+
 function Build-PSModule {
     [CmdletBinding(SupportsShouldProcess)]
     param(
@@ -132,20 +135,19 @@ function Build-PSModule {
     }
 
     # Compile to nupkg (run in isolated scope to suppress all output)
+    $savedGlobalVerbose = $global:VerbosePreference
+
     $nupkgOutputPath = & {
         $VerbosePreference = 'SilentlyContinue'
+        $global:VerbosePreference = 'SilentlyContinue'
         $ProgressPreference = 'SilentlyContinue'
         $ConfirmPreference = 'None'
         $WhatIfPreference = $false
 
-        Import-Module -Name PackageManagement -Force *>$null
         Register-PSRepository -Name BuildOutput -SourceLocation $outputPath -PublishLocation $outputPath -InstallationPolicy Trusted *>$null
 
         try {
             Publish-Module -Path $outputModulePath -Repository BuildOutput -Force *>$null
-        }
-        catch {
-            throw $_
         }
         finally {
             Unregister-PSRepository -Name BuildOutput *>$null
@@ -153,6 +155,8 @@ function Build-PSModule {
 
         return "$outputPath\$moduleName.$version.nupkg"
     }
+    
+    $global:VerbosePreference = $savedGlobalVerbose
 
     Write-Verbose "Module built successfully to: $nupkgOutputPath"
 }
