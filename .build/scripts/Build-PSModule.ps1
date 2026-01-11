@@ -53,6 +53,14 @@ function Build-PSModule {
     if (!$version) {
         throw "ModuleVersion not found in manifest '$manifestFilePath'."
     }
+    else {
+        try {
+            [version]$version > $null
+        }
+        catch {
+            throw "Unrecognised version '$version' in manifest '$manifestFilePath'."
+        }
+    }
 
     $outputModulePath = "$outputPath\$moduleName\$version"
 
