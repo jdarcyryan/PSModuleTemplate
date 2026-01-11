@@ -16,13 +16,13 @@
 [CmdletBinding()]
 param(
     [ValidateNotNullOrEmpty()]
-    [string]$Owner,
+    [string]$env:GITHUB_OWNER,
     
     [ValidateNotNullOrEmpty()]
-    [string]$Repository,
+    [string]$env:GITHUB_REPOSITORY,
     
     [ValidateNotNullOrEmpty()]
-    [string]$Token
+    [string]$env:GITHUB_TOKEN
 )
 
 $ErrorActionPreference = 'Stop'

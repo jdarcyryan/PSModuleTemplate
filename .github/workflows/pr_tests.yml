@@ -5,13 +5,32 @@ on:
     paths:
       - '**.psd1'
       - '!**/classes.psd1'
+  workflow-dispatch:
+
+permissions:
+  actions: read
+  packages: read
+  contents: read
 
 jobs:
   integration-tests:
     runs-on: windows-latest
     
+    env:
+      GITHUB_OWNER: ${{ github.repository_owner }}
+      GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Profile
+        shell: pwsh
+        run: .\.build\scripts\Setup-RunnerProfile.ps1 -Verbose
       
       - name: Build Module
         run: make build
+
+      - name: Check Manifest Version
+        shell: pwsh
+        run: .\.build\scripts\Test-GitHubPackageVersion.ps1
