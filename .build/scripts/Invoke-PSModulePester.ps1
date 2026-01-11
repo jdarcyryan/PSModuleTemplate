@@ -25,7 +25,7 @@ function Invoke-PSModulePester {
 
     try {
         # Import Pester from local path
-        Import-Module -Name $pesterModulePath -Force -ErrorAction Stop
+        Import-Module -Name $pesterModulePath -Force -ErrorAction Stop -Verbose:$false -WarningAction SilentlyContinue *>$null
 
         # Run Pester tests with detailed output
         Push-Location -Path $gitRoot
