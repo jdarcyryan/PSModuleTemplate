@@ -40,7 +40,3 @@ jobs:
       - name: Check Manifest Version
         shell: pwsh
         run: .\.build\scripts\Test-GitHubPackageVersion.ps1
-      
-      - name: Publish Module
-        shell: pwsh
-        run: .\.build\scripts\Publish-GitHubModule.ps1
