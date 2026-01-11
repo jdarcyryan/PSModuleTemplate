@@ -11,6 +11,8 @@ param(
     $Force
 )
 
+$ErrorActionPreference = 'Stop'
+
 function New-PSModule {
     <#
         .SYNOPSIS
@@ -39,7 +41,7 @@ function New-PSModule {
     $manifestFilePath = "$modulePath\$moduleName.psd1"
 
     # Create module directory
-    if (!(Test-Path -Path $modulePath -PathType Container)) {
+    if (-not (Test-Path -Path $modulePath -PathType Container)) {
         if ($PSCmdlet.ShouldProcess($modulePath, 'Create directory')) {
             New-Item -Path $modulePath -ItemType Directory -Confirm:$false -WhatIf:$false > $null
         }
@@ -53,12 +55,13 @@ function New-PSModule {
             $destinationPath = "$modulePath\$relativePath"
             
             if ($_.PSIsContainer) {
-                if (!(Test-Path -Path $destinationPath)) {
+                if (-not (Test-Path -Path $destinationPath)) {
                     if ($PSCmdlet.ShouldProcess($destinationPath, 'Create directory')) {
                         New-Item -Path $destinationPath -ItemType Directory -Confirm:$false -WhatIf:$false > $null
                     }
                 }
-            } else {
+            }
+            else {
                 # Skip .gitkeep if directory has other files or .gitkeep exists
                 if ($_.Name -eq '.gitkeep') {
                     $gitkeepDir = Split-Path -Path $destinationPath -Parent
@@ -68,29 +71,39 @@ function New-PSModule {
                             where Name -ne '.gitkeep' | 
                             select -First 1
                         
-                        if ($hasFiles) { return }
+                        if ($hasFiles) {
+                            return
+                        }
                     }
                     
-                    if (Test-Path -Path $destinationPath) { return }
+                    if (Test-Path -Path $destinationPath) {
+                        return
+                    }
                 }
                 
                 $exists = Test-Path -Path $destinationPath
-                $action = if ($exists) { 'Overwrite file' } else { 'Create file' }
+                $action = if ($exists) {
+                    'Overwrite file'
+                }
+                else {
+                    'Create file'
+                }
                 
                 if ($exists) {
                     if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
                         if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing file?', $destinationPath)) {
                             $parentDir = Split-Path -Path $destinationPath -Parent
-                            if (!(Test-Path -Path $parentDir)) {
+                            if (-not (Test-Path -Path $parentDir)) {
                                 New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
                             }
                             Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Confirm:$false -WhatIf:$false
                         }
                     }
-                } else {
+                }
+                else {
                     if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
                         $parentDir = Split-Path -Path $destinationPath -Parent
-                        if (!(Test-Path -Path $parentDir)) {
+                        if (-not (Test-Path -Path $parentDir)) {
                             New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
                         }
                         Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Confirm:$false -WhatIf:$false
@@ -101,7 +114,11 @@ function New-PSModule {
 
     # Copy Template.psm1 to module file
     $moduleFileExists = Test-Path -Path $moduleFilePath
-    $action = if ($moduleFileExists) { 'Overwrite file' } else { 'Create file' }
+    $action = if ($moduleFileExists) {
+        'Overwrite file'
+    } else {
+        'Create file'
+    }
     
     if ($moduleFileExists) {
         if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
@@ -109,7 +126,8 @@ function New-PSModule {
                 Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
             }
         }
-    } else {
+    }
+    else {
         if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
             Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
         }
@@ -117,7 +135,12 @@ function New-PSModule {
 
     # Create module manifest
     $manifestExists = Test-Path -Path $manifestFilePath
-    $action = if ($manifestExists) { 'Overwrite manifest' } else { 'Create manifest' }
+    $action = if ($manifestExists) {
+        'Overwrite manifest'
+    }
+    else {
+        'Create manifest'
+    }
     
     if ($manifestExists) {
         if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
@@ -125,11 +148,18 @@ function New-PSModule {
                 New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
             }
         }
-    } else {
+    }
+    else {
         if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
-            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
+            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -Description $moduleName -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
         }
     }
 }
 
-New-PSModule @PSBoundParameters
+try {
+    New-PSModule @PSBoundParameters
+}
+catch {
+    Write-Host "$_" -ForegroundColor Red
+    exit 1
+}
