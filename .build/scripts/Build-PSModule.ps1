@@ -36,6 +36,11 @@ function Build-PSModule {
     $manifestFilePath = "$modulePath\$moduleName.psd1"
     $outputPath = "$gitRoot\.output"
 
+    # Verify module path exists
+    if (!(Test-Path -Path $modulePath)) {
+        throw "Module directory not found at: $modulePath"
+    }
+
     # Verify module manifest exists
     if (!(Test-Path -Path $manifestFilePath)) {
         throw "Module manifest not found at: $manifestFilePath"
@@ -67,11 +72,26 @@ function Build-PSModule {
     }
 
     # Copy module files to output
-    Get-ChildItem -Path $modulePath -Recurse | foreach {
+    $moduleFiles = Get-ChildItem -Path $modulePath -Recurse -ErrorAction SilentlyContinue
+    
+    if (!$moduleFiles) {
+        Write-Warning "No files found in module directory: $modulePath"
+        return
+    }
+
+    $moduleFiles | foreach {
         $relativePath = $_.FullName.Substring($modulePath.Length + 1)
         $destinationPath = "$outputModulePath\$relativePath"
         
         if ($_.PSIsContainer) {
+            # Check if directory has files other than .gitkeep
+            $hasFiles = Get-ChildItem -Path $_.FullName -Recurse -File | 
+                where Name -ne '.gitkeep' | 
+                select -First 1
+            
+            # Skip empty directories
+            if (!$hasFiles) { return }
+            
             if (!(Test-Path -Path $destinationPath)) {
                 New-Item -Path $destinationPath -ItemType Directory -Confirm:$false -WhatIf:$false > $null
             }
