@@ -131,7 +131,30 @@ function Build-PSModule {
         }
     }
 
-    Write-Verbose "Module built successfully to: $outputModulePath"
+    # Compile to nupkg
+    $currentVerbosePreference = $VerbosePreference
+
+    $ConfirmPreference = 'None'
+    $WhatIfPreference = 'None'
+    $VerbosePreference = 'None'
+
+    Register-PSRepository -Name BuildOutput -SourceLocation $outputPath -PublishLocation $outputPath -InstallationPolicy Trusted > $null
+
+    try {
+        Publish-Module -Path $outputModulePath -Repository BuildOutput -Force > $null
+    }
+    catch {
+        throw $_
+    }
+    finally {
+        Unregister-PSRepository -Name BuildOutput > $null
+    }
+
+    $nupkgOutputPath = "$outputPath\$moduleName.$version.nupkg"
+
+    $VerbosePreference = $currentVerbosePreference
+
+    Write-Verbose "Module built successfully to: $nupkgOutputPath"
 }
 
 try {
