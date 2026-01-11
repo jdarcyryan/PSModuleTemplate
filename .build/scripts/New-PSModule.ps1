@@ -39,58 +39,46 @@ function New-PSModule {
 
     # Create module directory
     if (!(Test-Path -Path $modulePath -PathType Container)) {
-        if ($PSCmdlet.ShouldProcess($modulePath, "Create directory")) {
+        if ($PSCmdlet.ShouldProcess($modulePath, 'Create directory')) {
             New-Item -Path $modulePath -ItemType Directory -Confirm:$false -WhatIf:$false > $null
         }
     }
 
-    # Copy everything except Template.psm1
+    # Copy template files
     Get-ChildItem -Path $templateFolderPath -Recurse | 
         where Name -ne 'Template.psm1' | 
         foreach {
             $relativePath = $_.FullName.Substring($templateFolderPath.Path.Length + 1)
-            $destinationPath = Join-Path -Path $modulePath -ChildPath $relativePath
+            $destinationPath = "$modulePath\$relativePath"
             
             if ($_.PSIsContainer) {
-                # Create directories - only show WhatIf for new directories
                 if (!(Test-Path -Path $destinationPath)) {
-                    if ($PSCmdlet.ShouldProcess($destinationPath, "Create directory")) {
+                    if ($PSCmdlet.ShouldProcess($destinationPath, 'Create directory')) {
                         New-Item -Path $destinationPath -ItemType Directory -Confirm:$false -WhatIf:$false > $null
                     }
                 }
-                # Skip existing directories entirely - no ShouldProcess call
             } else {
-                # Handle .gitkeep files
+                # Skip .gitkeep if directory has other files or .gitkeep exists
                 if ($_.Name -eq '.gitkeep') {
-                    # Get the destination directory for this .gitkeep
                     $gitkeepDir = Split-Path -Path $destinationPath -Parent
                     
-                    # Check if directory has any files (excluding .gitkeep)
                     if (Test-Path -Path $gitkeepDir) {
                         $hasFiles = Get-ChildItem -Path $gitkeepDir -Recurse -File | 
                             where Name -ne '.gitkeep' | 
-                            Select-Object -First 1
+                            select -First 1
                         
-                        # Skip if directory has other files
-                        if ($hasFiles) {
-                            return
-                        }
+                        if ($hasFiles) { return }
                     }
                     
-                    # Also skip if .gitkeep already exists
-                    if (Test-Path -Path $destinationPath) {
-                        return
-                    }
+                    if (Test-Path -Path $destinationPath) { return }
                 }
                 
-                # Files - only confirm if overwriting
                 $exists = Test-Path -Path $destinationPath
-                $action = if ($exists) { "Overwrite file" } else { "Create file" }
+                $action = if ($exists) { 'Overwrite file' } else { 'Create file' }
                 
-                # Use ShouldContinue for overwrites to force confirmation
                 if ($exists) {
                     if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
-                        if ($Force -or $PSCmdlet.ShouldContinue("Overwrite existing file?", $destinationPath)) {
+                        if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing file?', $destinationPath)) {
                             $parentDir = Split-Path -Path $destinationPath -Parent
                             if (!(Test-Path -Path $parentDir)) {
                                 New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
@@ -99,7 +87,6 @@ function New-PSModule {
                         }
                     }
                 } else {
-                    # New files - just use ShouldProcess (no confirmation, only WhatIf)
                     if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
                         $parentDir = Split-Path -Path $destinationPath -Parent
                         if (!(Test-Path -Path $parentDir)) {
@@ -111,13 +98,13 @@ function New-PSModule {
             }
         }
 
-    # Copy and rename Template.psm1
+    # Copy Template.psm1 to module file
     $moduleFileExists = Test-Path -Path $moduleFilePath
-    $action = if ($moduleFileExists) { "Overwrite file" } else { "Create file" }
+    $action = if ($moduleFileExists) { 'Overwrite file' } else { 'Create file' }
     
     if ($moduleFileExists) {
         if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
-            if ($Force -or $PSCmdlet.ShouldContinue("Overwrite existing file?", $moduleFilePath)) {
+            if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing file?', $moduleFilePath)) {
                 Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
             }
         }
