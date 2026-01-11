@@ -1,4 +1,3 @@
-[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
     Creates a new PowerShell module from a template.
@@ -6,6 +5,7 @@
     .PARAMETER Force
     Suppresses confirmation prompts during module creation.
 #>
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [switch]
     $Force
@@ -14,6 +14,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function New-PSModule {
+    [CmdletBinding(SupportsShouldProcess)]
     <#
         .SYNOPSIS
         Creates a new PowerShell module from a template.
@@ -21,7 +22,6 @@ function New-PSModule {
         .PARAMETER Force
         Suppresses confirmation prompts during module creation.
     #>
-    [CmdletBinding(SupportsShouldProcess)]
     param(
         [switch]
         $Force

@@ -1,0 +1,42 @@
+name: Release Module
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '**.psd1'
+      - '!**/classes.psd1'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  packages: write
+  contents: write
+
+jobs:
+  release-module:
+    runs-on: windows-latest
+    
+    env:
+      GITHUB_OWNER: ${{ github.repository_owner }}
+      GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Profile
+        shell: pwsh
+        run: .\.build\scripts\Setup-RunnerProfile.ps1 -Verbose
+      
+      - name: Build Module
+        run: .\.build\scripts\Build-PSModule.ps1
+      
+      - name: Pester Tests
+        shell: pwsh
+        run: .\.build\scripts\Invoke-PSModulePester.ps1 -Verbose:$false
+      
+      - name: Publish Module
+        shell: pwsh
+        run: .\.build\scripts\Publish-GitHubModule.ps1

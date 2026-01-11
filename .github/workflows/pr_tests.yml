@@ -1,0 +1,33 @@
+name: Integration Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  packages: read
+  contents: read
+
+jobs:
+  integration-tests:
+    runs-on: windows-latest
+    
+    env:
+      GITHUB_OWNER: ${{ github.repository_owner }}
+      GITHUB_REPOSITORY: ${{ github.event.repository.name }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Profile
+        shell: pwsh
+        run: .\.build\scripts\Setup-RunnerProfile.ps1 -Verbose
+      
+      - name: Build Module
+        run: .\.build\scripts\Build-PSModule.ps1
+      
+      - name: Pester Tests
+        shell: pwsh
+        run: .\.build\scripts\Invoke-PSModulePester.ps1 -Verbose:$false
