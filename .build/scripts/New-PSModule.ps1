@@ -60,9 +60,27 @@ function New-PSModule {
                 }
                 # Skip existing directories entirely - no ShouldProcess call
             } else {
-                # Skip .gitkeep files if they already exist
-                if ($_.Name -eq '.gitkeep' -and (Test-Path -Path $destinationPath)) {
-                    return
+                # Handle .gitkeep files
+                if ($_.Name -eq '.gitkeep') {
+                    # Get the destination directory for this .gitkeep
+                    $gitkeepDir = Split-Path -Path $destinationPath -Parent
+                    
+                    # Check if directory has any files (excluding .gitkeep)
+                    if (Test-Path -Path $gitkeepDir) {
+                        $hasFiles = Get-ChildItem -Path $gitkeepDir -Recurse -File | 
+                            where Name -ne '.gitkeep' | 
+                            Select-Object -First 1
+                        
+                        # Skip if directory has other files
+                        if ($hasFiles) {
+                            return
+                        }
+                    }
+                    
+                    # Also skip if .gitkeep already exists
+                    if (Test-Path -Path $destinationPath) {
+                        return
+                    }
                 }
                 
                 # Files - only confirm if overwriting
