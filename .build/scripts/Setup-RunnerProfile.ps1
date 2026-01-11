@@ -35,7 +35,7 @@ function Setup-RunnerProfile {
         throw "Profile template '$sourceProfilePath' does not exist."
     }
 
-    $profileParent = Split-Path -Path $sourceProfilePath -Parent
+    $profileParent = Split-Path -Path $Profile -Parent
 
     Write-Verbose "Creating profile parent directory '$profileParent'."
     New-Item -Path $profileParent -ItemType Directory -Force > $null
