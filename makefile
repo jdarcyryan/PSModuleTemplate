@@ -15,4 +15,4 @@ build:
 # Run Pester tests with detailed output
 # Imports local Pester module, runs all tests, and displays detailed results
 pester:
-	pwsh -File './.build/scripts/Invoke-PSModulePester.ps1' -Verbose
+	pwsh -File './.build/scripts/Invoke-PSModulePester.ps1'

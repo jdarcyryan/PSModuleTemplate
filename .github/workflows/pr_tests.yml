@@ -30,7 +30,7 @@ jobs:
       
       - name: Pester Tests
         shell: pwsh
-        run: .\.build\scripts\Invoke-PSModulePester.ps1
+        run: .\.build\scripts\Invoke-PSModulePester.ps1 -Verbose:$false
 
       - name: Check Manifest Version
         shell: pwsh
