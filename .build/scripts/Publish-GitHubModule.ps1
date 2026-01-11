@@ -1,4 +1,3 @@
-[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
     Publishes a PowerShell module to GitHub Packages.
@@ -22,16 +21,14 @@
     .PARAMETER Force
     Suppresses confirmation prompts during package publishing.
 #>
+[CmdletBinding(SupportsShouldProcess)]
 param(
-    [ValidateNotNullOrEmpty()]
     [string]
     $Owner = $env:GITHUB_OWNER,
     
-    [ValidateNotNullOrEmpty()]
     [string]
     $Repository = $env:GITHUB_REPOSITORY,
     
-    [ValidateNotNullOrEmpty()]
     [string]
     $Token = $env:GITHUB_TOKEN,
 
@@ -67,15 +64,12 @@ function Publish-GitHubModule {
         Suppresses confirmation prompts during package publishing.
     #>
     param(
-        [ValidateNotNullOrEmpty()]
         [string]
         $Owner,
         
-        [ValidateNotNullOrEmpty()]
         [string]
         $Repository,
         
-        [ValidateNotNullOrEmpty()]
         [string]
         $Token,
 

@@ -1,4 +1,3 @@
-[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
         Checks if a package version exists in GitHub Packages or GitHub Releases.
@@ -12,18 +11,14 @@
     .PARAMETER Token
         GitHub Personal Access Token or GITHUB_TOKEN with read:packages permission.
 #>
-
 [CmdletBinding()]
 param(
-    [ValidateNotNullOrEmpty()]
     [string]
     $Owner = $env:GITHUB_OWNER,
     
-    [ValidateNotNullOrEmpty()]
     [string]
     $Repository = $env:GITHUB_REPOSITORY,
     
-    [ValidateNotNullOrEmpty()]
     [string]
     $Token = $env:GITHUB_TOKEN
 )
@@ -46,15 +41,12 @@ function Test-GitHubPackageVersion {
             GitHub Personal Access Token or GITHUB_TOKEN with read:packages permission.
     #>
     param(
-        [ValidateNotNullOrEmpty()]
         [string]
         $Owner,
         
-        [ValidateNotNullOrEmpty()]
         [string]
         $Repository,
         
-        [ValidateNotNullOrEmpty()]
         [string]
         $Token
     )

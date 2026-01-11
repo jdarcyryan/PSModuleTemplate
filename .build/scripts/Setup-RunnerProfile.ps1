@@ -1,4 +1,3 @@
-[CmdletBinding()]
 <#
 .SYNOPSIS
     Creates PowerShell profile for GitHub runner from template.
@@ -6,6 +5,7 @@
 .PARAMETER ProfilePath
     The path to the PowerShell profile template file to copy. Defaults to Microsoft.PowerShell_profile.ps1 in the parent directory.
 #>
+[CmdletBinding()]
 param(
     [ValidateNotNullOrEmpty()]
     [io.FileInfo]

@@ -1,4 +1,3 @@
-[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
     Builds a PowerShell module to the .output directory.
@@ -6,6 +5,7 @@
     .PARAMETER Force
     Suppresses confirmation prompts during module build.
 #>
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [switch]
     $Force
