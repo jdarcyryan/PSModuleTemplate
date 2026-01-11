@@ -30,11 +30,11 @@ jobs:
       
       - name: Build Module
         run: .\.build\scripts\Build-PSModule.ps1
+      
+      - name: Pester Tests
+        shell: pwsh
+        run: Invoke-Pester
 
       - name: Check Manifest Version
         shell: pwsh
         run: .\.build\scripts\Test-GitHubPackageVersion.ps1
-
-      - name: Pester Tests
-        shell: pwsh
-        run: Invoke-Pester
