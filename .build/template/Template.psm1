@@ -33,6 +33,15 @@ $classes | foreach {
 
 #region Private
 
-$privatePath = "$PSScriptRoot"
+$privatePath = "$PSScriptRoot\private"
+
+$privatePath | Get-ChildItem -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
+    . $_
+}
 
 #endregion Private
+
+#region Public
+
+
+#endregion Public
