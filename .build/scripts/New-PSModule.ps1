@@ -19,7 +19,7 @@ function New-PSModule {
         .PARAMETER Force
         Suppresses confirmation prompts during module creation.
     #>
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [switch]
         $Force
@@ -87,12 +87,26 @@ function New-PSModule {
                 $exists = Test-Path -Path $destinationPath
                 $action = if ($exists) { "Overwrite file" } else { "Create file" }
                 
-                if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
-                    $parentDir = Split-Path -Path $destinationPath -Parent
-                    if (!(Test-Path -Path $parentDir)) {
-                        New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
+                # Use ShouldContinue for overwrites to force confirmation
+                if ($exists) {
+                    if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
+                        if ($Force -or $PSCmdlet.ShouldContinue("Overwrite existing file?", $destinationPath)) {
+                            $parentDir = Split-Path -Path $destinationPath -Parent
+                            if (!(Test-Path -Path $parentDir)) {
+                                New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
+                            }
+                            Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Confirm:$false -WhatIf:$false
+                        }
                     }
-                    Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Confirm:$false -WhatIf:$false
+                } else {
+                    # New files - just use ShouldProcess (no confirmation, only WhatIf)
+                    if ($PSCmdlet.ShouldProcess($destinationPath, $action)) {
+                        $parentDir = Split-Path -Path $destinationPath -Parent
+                        if (!(Test-Path -Path $parentDir)) {
+                            New-Item -Path $parentDir -ItemType Directory -Force -Confirm:$false -WhatIf:$false > $null
+                        }
+                        Copy-Item -Path $_.FullName -Destination $destinationPath -Force -Confirm:$false -WhatIf:$false
+                    }
                 }
             }
         }
@@ -101,8 +115,16 @@ function New-PSModule {
     $moduleFileExists = Test-Path -Path $moduleFilePath
     $action = if ($moduleFileExists) { "Overwrite file" } else { "Create file" }
     
-    if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
-        Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
+    if ($moduleFileExists) {
+        if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
+            if ($Force -or $PSCmdlet.ShouldContinue("Overwrite existing file?", $moduleFilePath)) {
+                Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
+            }
+        }
+    } else {
+        if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
+            Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
+        }
     }
 }
 
