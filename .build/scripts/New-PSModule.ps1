@@ -36,6 +36,7 @@ function New-PSModule {
 
     $modulePath = "$gitRoot\$moduleName"
     $moduleFilePath = "$modulePath\$moduleName.psm1"
+    $manifestFilePath = "$modulePath\$moduleName.psd1"
 
     # Create module directory
     if (!(Test-Path -Path $modulePath -PathType Container)) {
@@ -111,6 +112,22 @@ function New-PSModule {
     } else {
         if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
             Copy-Item -Path $templateModuleFilePath -Destination $moduleFilePath -Force -Confirm:$false -WhatIf:$false
+        }
+    }
+
+    # Create module manifest
+    $manifestExists = Test-Path -Path $manifestFilePath
+    $action = if ($manifestExists) { 'Overwrite manifest' } else { 'Create manifest' }
+    
+    if ($manifestExists) {
+        if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
+            if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing manifest?', $manifestFilePath)) {
+                New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
+            }
+        }
+    } else {
+        if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
+            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
         }
     }
 }
