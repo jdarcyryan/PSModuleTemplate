@@ -42,7 +42,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # Pre-import PackageManagement to avoid verbose output during publish
-Import-Module -Name PackageManagement -Force -Verbose:$false -WarningAction SilentlyContinue *>$null
+Import-Module -Name PackageManagement -Force -Verbose:$false -WarningAction SilentlyContinue > $null
 
 function Publish-GitHubModule {
     [CmdletBinding(SupportsShouldProcess)]
@@ -119,10 +119,10 @@ function Publish-GitHubModule {
     $sourceUrl = "https://nuget.pkg.github.com/$Owner/index.json"
     $repositoryName = 'GitHubPackages'
 
-    # Get GitHub credential object
-    $ghCredential = [pscredential]::new(
-        $Owner,
-        (ConvertTo-SecureString $Token -AsPlainText -Force)
+    # Get GitHub credential object for PSResourceGet
+    $ghCredential = [Microsoft.PowerShell.PSResourceGet.UtilClasses.PSCredentialInfo]::new(
+        $sourceUrl,
+        [pscredential]::new($Owner, (ConvertTo-SecureString $Token -AsPlainText -Force))
     )
 
     # Check if package already exists in GitHub Packages
@@ -135,13 +135,13 @@ function Publish-GitHubModule {
             $ProgressPreference = 'SilentlyContinue'
 
             # Register temporary repository to check for existing package
-            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -Credential $ghCredential -ErrorAction SilentlyContinue *>$null
+            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -CredentialInfo $ghCredential -ErrorAction SilentlyContinue > $null
 
             try {
-                Find-PSResource -Name $moduleName -Version $version -Repository $repositoryName -Credential $ghCredential -ErrorAction SilentlyContinue
+                Find-PSResource -Name $moduleName -Version $version -Repository $repositoryName -CredentialInfo $ghCredential -ErrorAction SilentlyContinue
             }
             finally {
-                Unregister-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue *>$null
+                Unregister-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue > $null
             }
         }
 
@@ -172,21 +172,14 @@ function Publish-GitHubModule {
             $WhatIfPreference = $false
 
             # Register GitHub Packages repository
-            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -Credential $ghCredential *>$null
+            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -CredentialInfo $ghCredential > $null
 
             try {
-                # Get module path from .output
-                $moduleVersionPath = "$outputPath\$moduleName\$version"
-                
-                if (-not (Test-Path -Path $moduleVersionPath)) {
-                    throw "Module version path not found at: '$moduleVersionPath'"
-                }
-
-                # Publish module
-                Publish-PSResource -Path $moduleVersionPath -Repository $repositoryName -Credential $ghCredential *>$null
+                # Publish nupkg file
+                Publish-PSResource -Path $nupkgFile.FullName -Repository $repositoryName -CredentialInfo $ghCredential > $null
             }
             finally {
-                Unregister-PSResourceRepository -Name $repositoryName *>$null
+                Unregister-PSResourceRepository -Name $repositoryName > $null
             }
         }
 
