@@ -18,6 +18,13 @@ Import-Module -Name PackageManagement -Force -Verbose:$false -WarningAction Sile
 
 function Build-PSModule {
     [CmdletBinding(SupportsShouldProcess)]
+    <#
+        .SYNOPSIS
+        Builds a PowerShell module to the .output directory.
+
+        .PARAMETER Force
+        Suppresses confirmation prompts during module build.
+    #>
     param(
         [switch]
         $Force

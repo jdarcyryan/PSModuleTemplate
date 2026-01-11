@@ -19,12 +19,11 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Test-GitHubPackageVersion {
+    [CmdletBinding()]
     <#
     .SYNOPSIS
         Checks if a package version exists in GitHub Packages or GitHub Releases.
     #>
-    
-    [CmdletBinding()]
     param(
         [ValidateNotNullOrEmpty()]
         [string]$Owner,
