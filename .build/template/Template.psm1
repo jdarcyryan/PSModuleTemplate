@@ -16,9 +16,11 @@ $classes | foreach {
 
     switch ($extension) {
         '.ps1' {
+            # Process standard classes
             . $_
         }
         '.cs' {
+            # Process CSharp classes
             Add-Type -Path $_ -Language CSharp
         }
         default {
@@ -31,5 +33,6 @@ $classes | foreach {
 
 #region Private
 
+$privatePath = "$PSScriptRoot"
 
 #endregion Private
