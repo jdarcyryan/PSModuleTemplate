@@ -19,7 +19,7 @@ function New-PSModule {
         .PARAMETER Force
         Suppresses confirmation prompts during module creation.
     #>
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param(
         [switch]
         $Force
