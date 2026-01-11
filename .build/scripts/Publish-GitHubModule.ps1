@@ -4,7 +4,7 @@
     Publishes a PowerShell module to GitHub Packages.
 
     .DESCRIPTION
-    Publishes the built module package to GitHub Packages.
+    Publishes the built module package to GitHub Packages using dotnet nuget CLI.
     Throws an error if the package version already exists.
 
     .PARAMETER Owner
@@ -41,9 +41,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Pre-import PackageManagement to avoid verbose output during publish
-Import-Module -Name PackageManagement -Force -Verbose:$false -WarningAction SilentlyContinue > $null
-
 function Publish-GitHubModule {
     [CmdletBinding(SupportsShouldProcess)]
     <#
@@ -51,7 +48,7 @@ function Publish-GitHubModule {
         Publishes a PowerShell module to GitHub Packages.
 
         .DESCRIPTION
-        Publishes the built module package to GitHub Packages.
+        Publishes the built module package to GitHub Packages using dotnet nuget CLI.
         Throws an error if the package version already exists.
 
         .PARAMETER Owner
@@ -117,76 +114,58 @@ function Publish-GitHubModule {
 
     # Construct GitHub Packages NuGet source URL
     $sourceUrl = "https://nuget.pkg.github.com/$Owner/index.json"
-    $repositoryName = 'GitHubPackages'
+    $sourceName = 'github'
 
-    # Get GitHub credential object for PSResourceGet
-    $ghCredential = [Microsoft.PowerShell.PSResourceGet.UtilClasses.PSCredentialInfo]::new(
-        $sourceUrl,
-        [pscredential]::new($Owner, (ConvertTo-SecureString $Token -AsPlainText -Force))
-    )
-
-    # Check if package already exists in GitHub Packages
-    try {
-        $savedGlobalVerbose = $global:VerbosePreference
-
-        $existingPackage = & {
-            $VerbosePreference = 'SilentlyContinue'
-            $global:VerbosePreference = 'SilentlyContinue'
-            $ProgressPreference = 'SilentlyContinue'
-
-            # Register temporary repository to check for existing package
-            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -CredentialInfo $ghCredential -ErrorAction SilentlyContinue > $null
-
-            try {
-                Find-PSResource -Name $moduleName -Version $version -Repository $repositoryName -CredentialInfo $ghCredential -ErrorAction SilentlyContinue
-            }
-            finally {
-                Unregister-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue > $null
-            }
-        }
-
-        $global:VerbosePreference = $savedGlobalVerbose
-
-        if ($existingPackage) {
-            throw "Package '$moduleName' version '$version' already exists in GitHub Packages. Increment the version in the manifest to publish a new version."
-        }
-    }
-    catch {
-        # If error is about package already existing, rethrow it
-        if ($_.Exception.Message -match 'already exists') {
-            throw
-        }
-        # Otherwise just log that we couldn't check (package probably doesn't exist)
-        Write-Verbose "Could not check for existing package: $_"
-    }
-
-    # Publish to GitHub Packages (run in isolated scope to suppress all output)
+    # Publish to GitHub Packages using dotnet nuget CLI
     if ($PSCmdlet.ShouldProcess($nupkgFile.FullName, 'Publish to GitHub Packages')) {
-        $savedGlobalVerbose = $global:VerbosePreference
+        try {
+            # Remove source if it exists
+            Write-Verbose "Removing existing GitHub source if present..."
+            & dotnet nuget remove source $sourceName 2>&1 | Out-Null
 
-        & {
-            $VerbosePreference = 'SilentlyContinue'
-            $global:VerbosePreference = 'SilentlyContinue'
-            $ProgressPreference = 'SilentlyContinue'
-            $ConfirmPreference = 'None'
-            $WhatIfPreference = $false
-
-            # Register GitHub Packages repository
-            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -CredentialInfo $ghCredential > $null
-
-            try {
-                # Publish nupkg file
-                Publish-PSResource -Path $nupkgFile.FullName -Repository $repositoryName -CredentialInfo $ghCredential > $null
+            # Add GitHub Packages source
+            Write-Verbose "Adding GitHub Packages source: $sourceUrl"
+            $addSourceArgs = @(
+                'nuget', 'add', 'source', $sourceUrl,
+                '--name', $sourceName,
+                '--username', $Owner,
+                '--password', $Token,
+                '--store-password-in-clear-text'
+            )
+            
+            $addOutput = & dotnet @addSourceArgs 2>&1
+            
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to add NuGet source: $addOutput"
             }
-            finally {
-                Unregister-PSResourceRepository -Name $repositoryName > $null
+
+            # Push package
+            Write-Verbose "Pushing package to GitHub Packages..."
+            $pushArgs = @(
+                'nuget', 'push', $nupkgFile.FullName,
+                '--api-key', $Token,
+                '--source', $sourceName,
+                '--skip-duplicate'
+            )
+            
+            $pushOutput = & dotnet @pushArgs 2>&1
+            
+            if ($LASTEXITCODE -ne 0) {
+                # Check if error is about duplicate package
+                if ($pushOutput -match 'already exists' -or $pushOutput -match 'conflict') {
+                    throw "Package '$moduleName' version '$version' already exists in GitHub Packages. Increment the version in the manifest to publish a new version."
+                }
+                throw "Failed to push package: $pushOutput"
             }
+
+            Write-Verbose "Module published successfully to GitHub Packages"
+            Write-Verbose "Package URL: https://github.com/$Owner/$Repository/packages"
         }
-
-        $global:VerbosePreference = $savedGlobalVerbose
-
-        Write-Verbose "Module published successfully to GitHub Packages"
-        Write-Verbose "Package URL: https://github.com/$Owner/$Repository/packages"
+        finally {
+            # Clean up - remove the source
+            Write-Verbose "Removing GitHub Packages source..."
+            & dotnet nuget remove source $sourceName 2>&1 | Out-Null
+        }
     }
 }
 
