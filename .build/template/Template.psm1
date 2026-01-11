@@ -58,7 +58,7 @@ $aliasToExport = Compare-Object $currentAlias (Get-Alias | select Name, Referenc
     where SideIndicator -eq '=>' |
     select -ExpandProperty InputObject
 
-# Find new commands (InputObject is just the string name)
+# Find new commands
 $commandsToExport = Compare-Object $currentCommands (Get-Command).Name |
     where SideIndicator -eq '=>' |
     where InputObject -notin $aliasToExport.ReferencedCommand |
