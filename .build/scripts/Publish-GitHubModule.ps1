@@ -1,3 +1,4 @@
+[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
     Publishes a PowerShell module to GitHub Packages.
@@ -21,7 +22,6 @@
     .PARAMETER Force
     Suppresses confirmation prompts during package publishing.
 #>
-[CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateNotNullOrEmpty()]
     [string]
@@ -119,6 +119,12 @@ function Publish-GitHubModule {
     $sourceUrl = "https://nuget.pkg.github.com/$Owner/index.json"
     $repositoryName = 'GitHubPackages'
 
+    # Get GitHub credential object
+    $ghCredential = [pscredential]::new(
+        $Owner,
+        (ConvertTo-SecureString $Token -AsPlainText -Force)
+    )
+
     # Check if package already exists in GitHub Packages
     try {
         $savedGlobalVerbose = $global:VerbosePreference
@@ -129,13 +135,13 @@ function Publish-GitHubModule {
             $ProgressPreference = 'SilentlyContinue'
 
             # Register temporary repository to check for existing package
-            Register-PSRepository -Name $repositoryName -SourceLocation $sourceUrl -PublishLocation $sourceUrl -InstallationPolicy Trusted -Credential (New-Object System.Management.Automation.PSCredential('token', (ConvertTo-SecureString $Token -AsPlainText -Force))) -ErrorAction SilentlyContinue *>$null
+            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -Credential $ghCredential -ErrorAction SilentlyContinue *>$null
 
             try {
-                Find-Module -Name $moduleName -RequiredVersion $version -Repository $repositoryName -ErrorAction SilentlyContinue
+                Find-PSResource -Name $moduleName -Version $version -Repository $repositoryName -Credential $ghCredential -ErrorAction SilentlyContinue
             }
             finally {
-                Unregister-PSRepository -Name $repositoryName -ErrorAction SilentlyContinue *>$null
+                Unregister-PSResourceRepository -Name $repositoryName -ErrorAction SilentlyContinue *>$null
             }
         }
 
@@ -165,11 +171,8 @@ function Publish-GitHubModule {
             $ConfirmPreference = 'None'
             $WhatIfPreference = $false
 
-            # Create credential for GitHub Packages
-            $credential = New-Object System.Management.Automation.PSCredential('token', (ConvertTo-SecureString $Token -AsPlainText -Force))
-
             # Register GitHub Packages repository
-            Register-PSRepository -Name $repositoryName -SourceLocation $sourceUrl -PublishLocation $sourceUrl -InstallationPolicy Trusted -Credential $credential *>$null
+            Register-PSResourceRepository -Name $repositoryName -Uri $sourceUrl -Trusted -Credential $ghCredential *>$null
 
             try {
                 # Get module path from .output
@@ -180,10 +183,10 @@ function Publish-GitHubModule {
                 }
 
                 # Publish module
-                Publish-Module -Path $moduleVersionPath -Repository $repositoryName -NuGetApiKey $Token -Force *>$null
+                Publish-PSResource -Path $moduleVersionPath -Repository $repositoryName -Credential $ghCredential *>$null
             }
             finally {
-                Unregister-PSRepository -Name $repositoryName *>$null
+                Unregister-PSResourceRepository -Name $repositoryName *>$null
             }
         }
 
