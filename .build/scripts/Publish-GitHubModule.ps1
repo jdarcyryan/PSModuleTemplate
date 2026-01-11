@@ -23,12 +23,15 @@
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
+    [ValidateNotNullOrEmpty()]
     [string]
     $Owner = $env:GITHUB_OWNER,
     
+    [ValidateNotNullOrEmpty()]
     [string]
     $Repository = $env:GITHUB_REPOSITORY,
     
+    [ValidateNotNullOrEmpty()]
     [string]
     $Token = $env:GITHUB_TOKEN,
 
@@ -64,14 +67,17 @@ function Publish-GitHubModule {
         Suppresses confirmation prompts during package publishing.
     #>
     param(
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Owner,
+        $Owner = $env:GITHUB_OWNER,
         
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Repository,
+        $Repository = $env:GITHUB_REPOSITORY,
         
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Token,
+        $Token = $env:GITHUB_TOKEN,
 
         [switch]
         $Force

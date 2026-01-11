@@ -13,12 +13,15 @@
 #>
 [CmdletBinding()]
 param(
+    [ValidateNotNullOrEmpty()]
     [string]
     $Owner = $env:GITHUB_OWNER,
     
+    [ValidateNotNullOrEmpty()]
     [string]
     $Repository = $env:GITHUB_REPOSITORY,
     
+    [ValidateNotNullOrEmpty()]
     [string]
     $Token = $env:GITHUB_TOKEN
 )
@@ -41,14 +44,17 @@ function Test-GitHubPackageVersion {
             GitHub Personal Access Token or GITHUB_TOKEN with read:packages permission.
     #>
     param(
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Owner,
+        $Owner = $env:GITHUB_OWNER,
         
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Repository,
+        $Repository = $env:GITHUB_REPOSITORY,
         
+        [ValidateNotNullOrEmpty()]
         [string]
-        $Token
+        $Token = $env:GITHUB_TOKEN
     )
     
     $nupkg = Get-ChildItem -Path '.output' -Filter '*.nupkg' | select -First 1
