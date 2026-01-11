@@ -35,7 +35,7 @@ $classes | foreach {
 
 $privatePath = "$PSScriptRoot\private"
 
-$privatePath | Get-ChildItem -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
+Get-ChildItem -Path $privatePath -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
     . $_.FullName
 }
 
@@ -45,28 +45,32 @@ $privatePath | Get-ChildItem -Filter '*.ps1' | where PSIsContainer -eq $false | 
 
 $publicPath = "$PSScriptRoot\public"
 
-# Alias snapshot
+# Snapshots
 $currentAlias = Get-Alias | select Name, ReferencedCommand
-
-# Function snapshot
 $currentCommands = (Get-Command).Name
 
-$publicPath | Get-ChildItem -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
+Get-ChildItem -Path $publicPath -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
     . $_.FullName
 }
 
-# Exported commands and alias'
-$aliasToExport = Compare-Object $currentAlias (Get-Alias) -Property Name, ReferencedCommand |
+# Find new aliases
+$aliasToExport = Compare-Object $currentAlias (Get-Alias | select Name, ReferencedCommand) -Property Name, ReferencedCommand |
     where SideIndicator -eq '=>' |
     select -ExpandProperty InputObject
 
+# Find new commands (InputObject is just the string name)
 $commandsToExport = Compare-Object $currentCommands (Get-Command).Name |
     where SideIndicator -eq '=>' |
-    where Name -notin $aliasToExport.ReferencedCommand |
+    where InputObject -notin $aliasToExport.ReferencedCommand |
     select -ExpandProperty InputObject
 
-Export-ModuleMember -Function $aliasToExport.ReferencedCommand -Alias $aliasToExport.Name
+# Combine all functions and export
+$allFunctions = @($commandsToExport) + @($aliasToExport.ReferencedCommand) | 
+    where { $_ } | 
+    select -Unique
 
-Export-ModuleMember -Function $commandsToExport.Name
+if ($allFunctions -or $aliasToExport) {
+    Export-ModuleMember -Function $allFunctions -Alias $aliasToExport.Name
+}
 
 #endregion Public
