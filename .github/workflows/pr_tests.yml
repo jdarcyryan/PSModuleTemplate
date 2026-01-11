@@ -1,10 +1,6 @@
 name: Integration Tests
 
 on:
-  push:
-    paths:
-      - '**.psd1'
-      - '!**/classes.psd1'
   pull_request:
     paths:
       - '**.psd1'
