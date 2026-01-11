@@ -2,6 +2,15 @@
 <#
     .SYNOPSIS
         Checks if a package version exists in GitHub Packages or GitHub Releases.
+    
+    .PARAMETER Owner
+        The GitHub organization or user name that owns the repository.
+    
+    .PARAMETER Repository
+        The GitHub repository name where releases are published.
+    
+    .PARAMETER Token
+        GitHub Personal Access Token or GITHUB_TOKEN with read:packages permission.
 #>
 
 [CmdletBinding()]
@@ -21,8 +30,17 @@ $ErrorActionPreference = 'Stop'
 function Test-GitHubPackageVersion {
     [CmdletBinding()]
     <#
-    .SYNOPSIS
-        Checks if a package version exists in GitHub Packages or GitHub Releases.
+        .SYNOPSIS
+            Checks if a package version exists in GitHub Packages or GitHub Releases.
+        
+        .PARAMETER Owner
+            The GitHub organization or user name that owns the repository.
+        
+        .PARAMETER Repository
+            The GitHub repository name where releases are published.
+        
+        .PARAMETER Token
+            GitHub Personal Access Token or GITHUB_TOKEN with read:packages permission.
     #>
     param(
         [ValidateNotNullOrEmpty()]
