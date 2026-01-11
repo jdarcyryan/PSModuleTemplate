@@ -1,12 +1,12 @@
 #region Classes
 
-$classesDirectoryPath = "$PSScriptRoot\classes"
-$classesDataFilePath = "$classesDirectoryPath\classes.psd1"
+$classesPath = "$PSScriptRoot\classes"
+$classesDataFilePath = "$classesPath\classes.psd1"
 
 $classes = (Import-PowerShellDataFile -Path $classesDataFilePath).classes
 
 $classes | foreach {
-    $currentClassPath = "$classesDirectoryPath\$_"
+    $currentClassPath = "$classesPath\$_"
 
     if (!(Test-Path -Path $currentClassPath)) {
         throw "Class '$_' does not exist."
@@ -28,3 +28,8 @@ $classes | foreach {
 }
 
 #endregion Classes
+
+#region Private
+
+
+#endregion Private
