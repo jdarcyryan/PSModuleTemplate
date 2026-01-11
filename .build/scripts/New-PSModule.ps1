@@ -11,6 +11,8 @@ param(
     $Force
 )
 
+$ErrorActionPreference = 'Stop'
+
 function New-PSModule {
     <#
         .SYNOPSIS
@@ -132,4 +134,9 @@ function New-PSModule {
     }
 }
 
-New-PSModule @PSBoundParameters
+try {
+    New-PSModule @PSBoundParameters
+} catch {
+    Write-Host "$_" -ForegroundColor Red
+    exit 1
+}

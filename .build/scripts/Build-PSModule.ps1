@@ -11,14 +11,9 @@ param(
     $Force
 )
 
-function Build-PSModule {
-    <#
-        .SYNOPSIS
-        Builds a PowerShell module to the .output directory.
+$ErrorActionPreference = 'Stop'
 
-        .PARAMETER Force
-        Suppresses confirmation prompts during module build.
-    #>
+function Build-PSModule {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [switch]
@@ -38,19 +33,27 @@ function Build-PSModule {
 
     # Verify module path exists
     if (!(Test-Path -Path $modulePath)) {
-        throw "Module directory not found at: $modulePath"
+        throw "Module directory not found at: '$modulePath', run 'make setup' to initialize the module structure."
     }
 
     # Verify module manifest exists
     if (!(Test-Path -Path $manifestFilePath)) {
-        throw "Module manifest not found at: $manifestFilePath"
+        throw "Module manifest not found at: '$manifestFilePath', run 'make setup' to initialize the module structure."
     }
 
     # Get version from manifest
     $manifest = Import-PowerShellDataFile -Path $manifestFilePath
     $version = $manifest.ModuleVersion
     if (!$version) {
-        throw "ModuleVersion not found in manifest: $manifestFilePath"
+        throw "ModuleVersion not found in manifest '$manifestFilePath'."
+    }
+
+    # Verify there are source files (not just manifest) - CHECK THIS BEFORE OUTPUT HANDLING
+    $allFiles = @(Get-ChildItem -Path $modulePath -Recurse -File -ErrorAction SilentlyContinue)
+    $sourceFiles = @($allFiles | where { $_.Name -ne "$moduleName.psd1" -and $_.Name -ne '.gitkeep' })
+    
+    if ($sourceFiles.Count -eq 0) {
+        throw "No module source files found in: '$modulePath', run 'make setup' to initialize the module structure."
     }
 
     $outputModulePath = "$outputPath\$moduleName\$version"
@@ -73,11 +76,6 @@ function Build-PSModule {
 
     # Copy module files to output
     $moduleFiles = Get-ChildItem -Path $modulePath -Recurse -ErrorAction SilentlyContinue
-    
-    if (!$moduleFiles) {
-        Write-Warning "No files found in module directory: $modulePath"
-        return
-    }
 
     $moduleFiles | foreach {
         $relativePath = $_.FullName.Substring($modulePath.Length + 1)
@@ -122,4 +120,9 @@ function Build-PSModule {
     Write-Verbose "Module built successfully to: $outputModulePath"
 }
 
-Build-PSModule @PSBoundParameters
+try {
+    Build-PSModule @PSBoundParameters
+} catch {
+    Write-Host "$_" -ForegroundColor Red
+    exit 1
+}
