@@ -29,7 +29,7 @@ jobs:
         run: .\.build\scripts\Setup-RunnerProfile.ps1 -Verbose
       
       - name: Build Module
-        run: make build
+        run: .\.build\scripts\Build-PSModule.ps1
 
       - name: Check Manifest Version
         shell: pwsh
