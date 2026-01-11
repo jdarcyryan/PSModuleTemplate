@@ -1,6 +1,6 @@
 # PSModuleTemplate
 
-.PHONY: setup build
+.PHONY: setup build pester
 
 # Initialize module structure from template
 # Creates the module directory, manifest, and copies template files
@@ -11,3 +11,8 @@ setup:
 # Compiles module to .output/{ModuleName}/{Version}/ and creates .nupkg package
 build:
 	pwsh -File './.build/scripts/Build-PSModule.ps1' -Verbose
+
+# Run Pester tests with detailed output
+# Imports local Pester module, runs all tests, and displays detailed results
+pester:
+	pwsh -File './.build/scripts/Invoke-PSModulePester.ps1' -Verbose

@@ -33,7 +33,7 @@ jobs:
       
       - name: Pester Tests
         shell: pwsh
-        run: Invoke-Pester
+        run: .\.build\scripts\Invoke-PSModulePester.ps1
 
       - name: Check Manifest Version
         shell: pwsh
