@@ -1,0 +1,21 @@
+name: Integration Tests
+
+on:
+  push:
+    paths:
+      - '**.psd1'
+      - '!**/classes.psd1'
+  pull_request:
+    paths:
+      - '**.psd1'
+      - '!**/classes.psd1'
+
+jobs:
+  integration-tests:
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Module
+        run: make build
