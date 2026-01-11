@@ -107,6 +107,18 @@ function Build-PSModule {
         }
     }
 
+    # Copy LICENSE from git root if not present in module
+    $moduleLicense = Get-ChildItem -Path $modulePath -Filter 'LICENSE*' -File | select -First 1
+    
+    if (!$moduleLicense) {
+        $gitRootLicense = Get-ChildItem -Path $gitRoot -Filter 'LICENSE*' -File | select -First 1
+        
+        if ($gitRootLicense) {
+            $licenseDestination = "$outputModulePath\LICENSE.txt"
+            Copy-Item -Path $gitRootLicense.FullName -Destination $licenseDestination -Force -Confirm:$false -WhatIf:$false
+        }
+    }
+
     Write-Verbose "Module built successfully to: $outputModulePath"
 }
 
