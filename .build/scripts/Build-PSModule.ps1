@@ -29,6 +29,7 @@ function Build-PSModule {
 
     $modulePath = "$gitRoot\$moduleName"
     $manifestFilePath = "$modulePath\$moduleName.psd1"
+    $moduleFilePath = "$modulePath\$moduleName.psm1"
     $outputPath = "$gitRoot\.output"
 
     # Verify module path exists
@@ -41,19 +42,16 @@ function Build-PSModule {
         throw "Module manifest not found at: '$manifestFilePath', run 'make setup' to initialize the module structure."
     }
 
+    # Verify module file exists
+    if (!(Test-Path -Path $moduleFilePath)) {
+        throw "Module file not found at: '$moduleFilePath', run 'make setup' to initialize the module structure."
+    }
+
     # Get version from manifest
     $manifest = Import-PowerShellDataFile -Path $manifestFilePath
     $version = $manifest.ModuleVersion
     if (!$version) {
         throw "ModuleVersion not found in manifest '$manifestFilePath'."
-    }
-
-    # Verify there are source files (not just manifest) - CHECK THIS BEFORE OUTPUT HANDLING
-    $allFiles = @(Get-ChildItem -Path $modulePath -Recurse -File -ErrorAction SilentlyContinue)
-    $sourceFiles = @($allFiles | where { $_.Name -ne "$moduleName.psd1" -and $_.Name -ne '.gitkeep' })
-    
-    if ($sourceFiles.Count -eq 0) {
-        throw "No module source files found in: '$modulePath', run 'make setup' to initialize the module structure."
     }
 
     $outputModulePath = "$outputPath\$moduleName\$version"
