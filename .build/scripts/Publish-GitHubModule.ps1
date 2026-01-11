@@ -1,4 +1,3 @@
-[CmdletBinding(SupportsShouldProcess)]
 <#
     .SYNOPSIS
     Publishes a PowerShell module to GitHub Packages.
@@ -22,6 +21,7 @@
     .PARAMETER Force
     Suppresses confirmation prompts during package publishing.
 #>
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateNotNullOrEmpty()]
     [string]
