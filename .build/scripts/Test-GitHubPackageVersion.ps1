@@ -82,47 +82,96 @@ function Test-GitHubPackageVersion {
     Write-Verbose "Package: $packageName"
     Write-Verbose "Version: $version"
     
+    # Construct GitHub Packages NuGet source URL
+    $sourceUrl = "https://nuget.pkg.github.com/$Owner/index.json"
+    $sourceName = 'github-check'
+    
+    try {
+        # Remove source if it exists
+        Write-Verbose "Removing existing GitHub source if present..."
+        & dotnet nuget remove source $sourceName 2>&1 | Out-Null
+
+        # Add GitHub Packages source
+        Write-Verbose "Adding GitHub Packages source: $sourceUrl"
+        $addSourceArgs = @(
+            'nuget', 'add', 'source', $sourceUrl,
+            '--name', $sourceName,
+            '--username', $Owner,
+            '--password', $Token,
+            '--store-password-in-clear-text'
+        )
+        
+        $addOutput = & dotnet @addSourceArgs 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to add NuGet source: $addOutput"
+        }
+
+        # Check if package exists and get versions
+        Write-Verbose "Checking package versions in GitHub Packages..."
+        $searchArgs = @(
+            'package', 'search', $packageName,
+            '--source', $sourceName,
+            '--exact-match'
+        )
+        
+        $searchOutput = & dotnet @searchArgs 2>&1
+        
+        if ($LASTEXITCODE -eq 0 -and $searchOutput) {
+            # Package exists, get detailed version information
+            $listArgs = @(
+                'list', 'package', $packageName,
+                '--source', $sourceName,
+                '--include-prerelease'
+            )
+            
+            $listOutput = & dotnet @listArgs 2>&1
+            
+            if ($LASTEXITCODE -eq 0 -and $listOutput) {
+                # Parse versions from output
+                $existingVersions = @()
+                foreach ($line in $listOutput) {
+                    if ($line -match "$packageName\s+(\d+\.\d+\.\d+(?:\.\d+)?(?:-[\w\.-]+)?)") {
+                        $existingVersions += $Matches[1]
+                    }
+                }
+                
+                if ($existingVersions -contains $version) {
+                    throw "Version '$version' already exists in GitHub Packages."
+                }
+                
+                # Check if current version is later than latest existing version
+                if ($existingVersions.Count -gt 0) {
+                    $latestVersion = $existingVersions | Sort-Object { [System.Version]($_ -replace '-.*$', '') } | Select-Object -Last 1
+                    
+                    $currentVersionParsed = [System.Version]($version -replace '-.*$', '')
+                    $latestVersionParsed = [System.Version]($latestVersion -replace '-.*$', '')
+                    
+                    if ($currentVersionParsed -le $latestVersionParsed) {
+                        throw "Current version '$version' is not later than the latest existing version '$latestVersion' in GitHub Packages."
+                    }
+                    
+                    Write-Verbose "Current version '$version' is later than latest existing version '$latestVersion'."
+                }
+                
+                Write-Verbose "Version '$version' does not exist in GitHub Packages."
+            }
+        } else {
+            Write-Verbose 'Package not found in GitHub Packages (new package).'
+        }
+    }
+    finally {
+        # Clean up - remove the source
+        Write-Verbose "Removing GitHub Packages source..."
+        & dotnet nuget remove source $sourceName 2>&1 | Out-Null
+    }
+    
+    # Check GitHub Releases
     $headers = @{
         Authorization = "Bearer $Token"
         Accept        = 'application/vnd.github+json'
     }
     
-    # Check GitHub Packages
-    $packagesUri = "https://api.github.com/orgs/$Owner/packages/nuget/$packageName/versions"
-    
-    Write-Verbose 'Checking GitHub Packages...'
-    
-    try
-    {
-        $packagesResponse = Invoke-RestMethod -Uri $packagesUri -Headers $headers -ErrorAction Stop
-        $existingPackageVersions = $packagesResponse | foreach { $_.name }
-        
-        if ($existingPackageVersions -contains $version)
-        {
-            throw "Version '$version' already exists in GitHub Packages."
-        }
-        
-        Write-Verbose "Version '$version' does not exist in GitHub Packages."
-    }
-    catch
-    {
-        $statusCode = [int]$_.Exception.Response.StatusCode
-        
-        if ($statusCode -eq 404)
-        {
-            Write-Verbose 'Package not found in GitHub Packages (new package).'
-        }
-        elseif ($statusCode -eq 401 -or $statusCode -eq 403)
-        {
-            throw 'Failed to connect to GitHub Packages, check your token has read:packages permission.'
-        }
-        else
-        {
-            throw "Failed to connect to GitHub Packages: '$($_.Exception.Message)'"
-        }
-    }
-    
-    # Check GitHub Releases
     $releasesUri = "https://api.github.com/repos/$Owner/$Repository/releases"
     
     Write-Verbose 'Checking GitHub Releases...'
