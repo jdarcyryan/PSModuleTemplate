@@ -151,7 +151,7 @@ function New-PSModule {
     }
     else {
         if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
-            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
+            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -Description $moduleName -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
         }
     }
 }
