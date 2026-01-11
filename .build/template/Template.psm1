@@ -1,3 +1,24 @@
+#region Authoring
+
+###########################################################################
+# PSModuleTemplate
+# Author:  James D'Arcy Ryan
+# GitHub:  https://github.com/jdarcyryan/PSModuleTemplate
+# License: https://github.com/jdarcyryan/PSModuleTemplate/blob/main/LICENSE
+#
+# A standardized template for creating PowerShell modules with support for
+# classes (PowerShell and C#), private functions, and public functions with
+# automatic discovery and export of commands and aliases.
+#
+# LEGAL NOTICE:
+# The license referenced above applies to the PSModuleTemplate repository
+# and template structure only. Any module created using this template is
+# subject to its own license as specified in the module's LICENSE file,
+# which supersedes the template license for that specific module.
+###########################################################################
+
+#region Authoring
+
 #region Classes
 
 $classesPath = "$PSScriptRoot\classes"
