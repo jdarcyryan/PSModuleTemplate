@@ -1,7 +1,6 @@
 # Template defaults to ignore
 CONTRIBUTING.md
 LICENSE
-README.md
 
 # Self
 .templateignore
