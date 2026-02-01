@@ -27,10 +27,13 @@ function Invoke-PSModulePester {
     else {
         try {
             # Test module import before tests
-            . { Import-Module $outputModulePath }.GetNewClosure()
+            Import-Module $outputModulePath
         }
         catch {
             throw "Built module could not be imported at: '$outputModulePath', please run 'make build' to rebuild the module."
+        }
+        finally {
+            Get-Module | where Path -like "$outputModulePath\*" | Remove-Module
         }
     }
 
