@@ -162,7 +162,7 @@ function Publish-GitHubModule {
             # Set environment variables for release
             "module_name=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
             "module_version=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-            "nupkg_path=$($nupkgFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "nupkg_filename=$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source
