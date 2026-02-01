@@ -2,6 +2,9 @@
 
 .PHONY: setup build pester
 
+# Default target
+.DEFAULT_GOAL := build
+
 # Initialize module structure from template
 # Creates the module directory, manifest, and copies template files
 setup:
