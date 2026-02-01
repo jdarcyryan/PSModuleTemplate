@@ -60,21 +60,21 @@ jobs:
             If you are using PowerShell 7 or later, `Microsoft.PowerShell.PSResourceGet` is included.
             Pleae use the below command if you are using an earlier version of PowerShell -
             ```powershell
-            Install-Module -Name Microsoft.PowerShell.PSResourceGet
+            Install-Module -Name 'Microsoft.PowerShell.PSResourceGet'
             ```
 
             ### From GitHub Packages
             ```powershell
             # Register GitHub Packages source (one-time setup)
-            Register-PSResourceRepository -Name GitHub -Uri 'https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json'
+            Register-PSResourceRepository -Name 'GitHub' -Uri 'https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json'
 
             # Prepare token
-            $githubUsername = "GITHUB_USERNAME"
-            $githubToken = "GITHUB_TOKEN"
+            $githubUsername = 'GITHUB_USERNAME'
+            $githubToken = 'GITHUB_TOKEN'
 
             $githubCredential = [pscredential]::new(
                 $githubUsername,
-                (ConvertTo-SecureString $githubToken -AsPlainText -Force)
+                (ConvertTo-SecureString $githubToken -AsPlainText)
             )
             
             # Install the module
