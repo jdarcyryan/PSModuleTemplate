@@ -129,8 +129,7 @@ function Publish-GitHubModule {
                 'nuget', 'add', 'source', $sourceUrl,
                 '--name', $sourceName,
                 '--username', $Owner,
-                '--password', $Token,
-                '--store-password-in-clear-text'
+                '--password', $Token
             )
             
             $addOutput = & dotnet @addSourceArgs 2>&1
