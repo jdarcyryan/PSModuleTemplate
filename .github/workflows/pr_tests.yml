@@ -2,6 +2,13 @@ name: Integration Tests
 
 on:
   pull_request:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**/.gitkeep'
+      - '!LICENSE'
+      - '!Makefile'
+      - '!.github/workflows/release.yml'
   workflow_dispatch:
 
 permissions:
