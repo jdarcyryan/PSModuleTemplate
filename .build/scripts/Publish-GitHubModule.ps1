@@ -129,8 +129,7 @@ function Publish-GitHubModule {
                 'nuget', 'add', 'source', $sourceUrl,
                 '--name', $sourceName,
                 '--username', $Owner,
-                '--password', $Token,
-                '--store-password-in-clear-text'
+                '--password', $Token
             )
             
             $addOutput = & dotnet @addSourceArgs 2>&1
@@ -144,8 +143,7 @@ function Publish-GitHubModule {
             $pushArgs = @(
                 'nuget', 'push', $nupkgFile.FullName,
                 '--api-key', $Token,
-                '--source', $sourceName,
-                '--skip-duplicate'
+                '--source', $sourceName
             )
             
             $pushOutput = & dotnet @pushArgs 2>&1
@@ -160,6 +158,11 @@ function Publish-GitHubModule {
 
             Write-Verbose "Module published successfully to GitHub Packages"
             Write-Verbose "Package URL: https://github.com/$Owner/$Repository/packages"
+
+            # Set environment variables for release
+            "module_name=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "module_version=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "nupkg_path=.output/$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source

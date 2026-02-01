@@ -17,6 +17,25 @@ function Invoke-PSModulePester {
 
     $gitRoot = Resolve-Path -Path "$PSScriptRoot\..\.."
     $pesterModulePath = "$PSScriptRoot\..\modules\Pester"
+    $moduleName = Split-Path -Path $gitRoot -Leaf
+    $outputModulePath = "$gitRoot\.output\$moduleName"
+
+    # Verify module has built
+    if (-not (Test-Path -Path $outputModulePath -PathType Container)) {
+        throw "Module directory not found at: '$outputModulePath', run 'make build' to build the module."
+    }
+    else {
+        try {
+            # Test module import before tests
+            Import-Module $outputModulePath
+        }
+        catch {
+            throw "Built module could not be imported at: '$outputModulePath', please run 'make build' to rebuild the module."
+        }
+        finally {
+            Get-Module | where Path -like "$outputModulePath\*" | Remove-Module
+        }
+    }
 
     # Verify Pester module exists
     if (-not (Test-Path -Path $pesterModulePath)) {
