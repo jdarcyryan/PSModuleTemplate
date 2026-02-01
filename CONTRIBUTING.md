@@ -1,9 +1,10 @@
 # Contributing
 
-## Prerequisite Software
-* [Git](https://git-scm.com/install)
-* [Make](https://gnuwin32.sourceforge.net/packages/make.htm)
-* [PowerShell Core](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows)
+### Prerequisites
+
+- [Git](https://git-scm.com/install)
+- [Make](https://gnuwin32.sourceforge.net/packages/make.htm)
+- [PowerShell Core](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows)
 
 ## How to Contribute
 
