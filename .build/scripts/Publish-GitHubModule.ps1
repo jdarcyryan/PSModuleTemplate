@@ -144,8 +144,7 @@ function Publish-GitHubModule {
             $pushArgs = @(
                 'nuget', 'push', $nupkgFile.FullName,
                 '--api-key', $Token,
-                '--source', $sourceName,
-                '--skip-duplicate'
+                '--source', $sourceName
             )
             
             $pushOutput = & dotnet @pushArgs 2>&1
