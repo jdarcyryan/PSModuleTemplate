@@ -74,6 +74,8 @@ On pull request, the module will be built and tested with the pester tests in yo
 Once you merge your pull request, this will carry out the same steps but also release your package.
 It will produce release notes, changelog and a nupkg in GitHub packages.
 
+__Note__: _this will fail if the version is not bumped, or if the current version already exists as a release or package._
+
 ### After merge
 
 After merging to master, markdown files for each public function in the module will be created.
