@@ -1,9 +1,9 @@
 # Contributing
 
 ## Prerequisite Software
-* Git
-* Make
-* PowerShell Core (v7 or later)
+* [Git](https://git-scm.com/install)
+* [Make](https://gnuwin32.sourceforge.net/packages/make.htm)
+* [PowerShell Core](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows)
 
 ## How to Contribute
 
@@ -80,7 +80,7 @@ git push origin your-branch-name
 
 ### 8. Open a Pull Request
 
-Go to the original repository on GitHub and click "New Pull Request". Select your fork and branch, then provide a clear description of your changes.
+Go to the original repository on GitHub and click "[New Pull Request](https://github.com/jdarcyryan/PSModuleTemplate/compare)". Select your fork and branch, then provide a clear description of your changes.
 
 ## Guidelines
 
