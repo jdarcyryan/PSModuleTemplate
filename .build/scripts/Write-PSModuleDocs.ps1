@@ -53,7 +53,7 @@ $($help.Description.Text)
 ## Syntax
 
 $('```')powershell
-$(($help.Syntax | Out-String).Trim())
+$((Out-String -InputObject $help.Syntax).Trim())
 $('```')
 
 $(if ($parameters){
