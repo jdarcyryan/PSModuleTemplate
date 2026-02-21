@@ -43,11 +43,24 @@ function ConvertTo-HelpMarkdown {
         }
 
         # Syntax
-        $syntaxText = (Out-String -InputObject $help.Syntax).Trim()
+        # Syntax
+        $syntaxLines = foreach ($paramSet in $Command.ParameterSets) {
+            $paramStrings = foreach ($param in $paramSet.Parameters | Where-Object { $_.Name -notin [System.Management.Automation.Cmdlet]::CommonParameters }) {
+                $typeName = if ($param.ParameterType -ne [switch]) { " <$($param.ParameterType.Name)>" } else { '' }
+                $token = if ($param.Position -ge 0) {
+                    "[-$($param.Name)$typeName]" | ForEach-Object { if ($param.IsMandatory) { "[-$($param.Name)$typeName]" } else { "[[-$($param.Name)$typeName]]" } }
+                } else {
+                    if ($param.IsMandatory) { "-$($param.Name)$typeName" } else { "[-$($param.Name)$typeName]" }
+                }
+                $token
+            }
+            "$($Command.Name) $($paramStrings -join ' ')"
+        }
+        $syntaxText = ($syntaxLines -join "`n").Trim()
         if ($syntaxText) {
             $sections.Add("## Syntax`n`n``````powershell`n$syntaxText`n``````")
         }
-
+        
         # Parameters
         if ($parameters) {
             $paramLines = [Collections.Generic.List[string]]::new()
