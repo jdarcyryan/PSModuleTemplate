@@ -71,32 +71,8 @@ if (Test-Path -Path $privatePath) {
 $publicPath = "$PSScriptRoot\public"
 
 if (Test-Path -Path $publicPath) {
-    # Snapshots
-    $currentAlias = Get-Alias | select Name, ReferencedCommand
-    $currentCommands = (Get-Command).Name
-
     Get-ChildItem -Path $publicPath -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
         . $_.FullName
-    }
-
-    # Find new aliases
-    $aliasToExport = Compare-Object $currentAlias (Get-Alias | select Name, ReferencedCommand) -Property Name, ReferencedCommand |
-        where SideIndicator -eq '=>' |
-        select -ExpandProperty InputObject
-
-    # Find new commands
-    $commandsToExport = Compare-Object $currentCommands (Get-Command).Name |
-        where SideIndicator -eq '=>' |
-        where InputObject -notin $aliasToExport.ReferencedCommand |
-        select -ExpandProperty InputObject
-
-    # Combine all functions and export
-    $allFunctions = @($commandsToExport) + @($aliasToExport.ReferencedCommand) | 
-        where { $_ } | 
-        select -Unique
-
-    if ($allFunctions -or $aliasToExport) {
-        Export-ModuleMember -Function $allFunctions -Alias $aliasToExport.Name
     }
 }
 
