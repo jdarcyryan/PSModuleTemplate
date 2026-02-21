@@ -5,7 +5,6 @@ on:
     paths:
       - '**.psd1'
       - '!**/classes.psd1'
-  workflow_dispatch:
 
 permissions:
   contents: write
