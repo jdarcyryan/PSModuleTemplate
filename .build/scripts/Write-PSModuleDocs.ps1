@@ -6,104 +6,101 @@ function ConvertTo-HelpMarkdown {
     )
 
     begin {
-#        $gitRoot = Resolve-Path -Path "$PSScriptRoot\..\.."
-#        $moduleName = Split-Path -Path $gitRoot -Leaf
-#        $outputModulePath = "$gitRoot\.output\$moduleName"
-#
-#        # Verify module has built
-#        if (-not (Test-Path -Path $outputModulePath -PathType Container)) {
-#            throw "Module directory not found at: '$outputModulePath', run 'make build' to build the module."
-#        }
-#        else {
-#            try {
-#                # Test module import before tests
-#                Import-Module $outputModulePath
-#            }
-#            catch {
-#                throw "Built module could not be imported at: '$outputModulePath', please run 'make build' to rebuild the module."
-#            }
-#            finally {
-#                Get-Module | where Path -like "$outputModulePath\*" | Remove-Module
-#            }
-#        }
-#
-#        # Get module and alias'
-#        $module = Get-Module $outputModulePath
         $allAlias = Get-Alias
     }
 
     process {
         $help = Get-Help $Command -Full
+
+        # If there's no real help documentation, return null
+        if (-not $help -or (
+            (-not $help.Description) -and
+            (-not $help.examples) -and
+            ($help.Synopsis.Trim() -eq $command.Name -or -not $help.Synopsis)
+        )) {
+            return $null
+        }
+
         $parameters = $help.parameters.parameter
         $examples = $help.examples.example
+        $alias = @(($allAlias | Where-Object ResolvedCommandName -eq $command.Name).Name)
 
-        $alias = @(($allAlias | where ResolvedCommandName -eq $command.Name).Name)
+        $sections = [Collections.Generic.List[string]]::new()
 
-        @"
-# $($command.Name)$(if ($alias) {" ($($alias.Name -join ', '))"})
+        # Header
+        $header = "# $($command.Name)"
+        if ($alias) { $header += " ($($alias -join ', '))" }
+        $sections.Add($header)
 
-## Synopsis
+        # Synopsis
+        if ($help.Synopsis -and $help.Synopsis.Trim() -ne $command.Name) {
+            $sections.Add("## Synopsis`n`n$($help.Synopsis)")
+        }
 
-$($help.Synopsis)
+        # Description
+        if ($help.Description.Text) {
+            $sections.Add("## Description`n`n$($help.Description.Text)")
+        }
 
-## Description
+        # Syntax
+        $syntaxText = (Out-String -InputObject $help.Syntax).Trim()
+        if ($syntaxText) {
+            $sections.Add("## Syntax`n`n``````powershell`n$syntaxText`n``````")
+        }
 
-$($help.Description.Text)
+        # Parameters
+        if ($parameters) {
+            $paramLines = [Collections.Generic.List[string]]::new()
+            $paramLines.Add("## Parameters")
 
-## Syntax
+            foreach ($param in $parameters) {
+                $paramSection = "### -$($param.Name)"
 
-$('```')powershell
-$((Out-String -InputObject $help.Syntax).Trim())
-$('```')
+                if ($param.Description.Text) {
+                    $paramSection += "`n`n$($param.Description.Text)"
+                }
 
-$(if ($parameters){
-    @"
-## Parameters
+                $bullets = [Collections.Generic.List[string]]::new()
+                if ($param.Type.Name)     { $bullets.Add("- **Type**: $($param.Type.Name)") }
+                if ($param.Required)      { $bullets.Add("- **Required**: $($param.Required)") }
+                if ($param.Position)      { $bullets.Add("- **Position**: $($param.Position)") }
+                $bullets.Add("- **Default value**: $(if ($param.defaultValue) { $param.defaultValue } else { 'None' })")
+                if ($param.pipelineInput) { $bullets.Add("- **Accepts pipeline input**: $($param.pipelineInput)") }
 
-$(
-    $parameters | foreach {
-        @"
-### -$($_.Name)
+                $paramSection += "`n`n$($bullets -join "`n")"
+                $paramLines.Add($paramSection)
+            }
 
-$($_.Description.Text)
+            $sections.Add($paramLines -join "`n`n")
+        }
 
-- **Type**: $($_.Type.Name)
-- **Required**: $($_.Required)
-- **Position**: $($_.Position)
-- **Default value**: $(
-    if ($_.defaultValue) {
-        $_.defaultValue
+        # Examples
+        if ($examples) {
+            $exampleLines = [Collections.Generic.List[string]]::new()
+            $exampleLines.Add("## Examples")
+
+            $i = 1
+            foreach ($example in $examples) {
+                $exampleSection = "### Example $i"
+
+                $remarksText = ($example.remarks.Text -join '').Trim()
+                if ($remarksText) {
+                    $exampleSection += "`n`n$remarksText"
+                }
+
+                if ($example.code) {
+                    $exampleSection += "`n`n``````powershell`n$($example.code)`n``````"
+                }
+
+                $exampleLines.Add($exampleSection)
+                $i++
+            }
+
+            $sections.Add($exampleLines -join "`n`n")
+        }
+
+        $sections -join "`n`n"
     }
-    else {
-        'None'
-    }
-)
-- **Accepts pipeline input**: $($_.pipelineInput)
-"@
-    }
-)
 
-"@
-})
-## Examples
-
-$($examples | foreach {$i = 1} {
-    @"
-### Example $i
-
-$($($_.remarks.Text -join '').Trim())
-
-$('```')powershell
-$($_.code)
-$('```')
-
-"@
-    $i++
-})
-"@
-    }
-
-    end {
-        # remove module
-    }
+    end {}
 }
