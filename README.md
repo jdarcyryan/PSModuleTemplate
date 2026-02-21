@@ -68,6 +68,7 @@ make pester
 ### Pull Request
 
 On pull request, the module will be built and tested with the pester tests in your repository.
+Another runner will execute, producing markdown documentation for exported functions.
 
 ### Merge to master
 
