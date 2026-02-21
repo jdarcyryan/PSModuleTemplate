@@ -35,7 +35,7 @@ function ConvertTo-HelpMarkdown {
         $sections.Add($header)
 
         # Synopsis
-        if ($help.Synopsis -and $help.Synopsis.Trim() -ne $command.Name) {
+        if ($help.Synopsis -and $help.Synopsis.Trim() -notlike "$($command.Name)*") {
             $sections.Add("## Synopsis`n`n$($help.Synopsis)")
         }
 
@@ -49,7 +49,7 @@ function ConvertTo-HelpMarkdown {
             $paramStrings = foreach ($param in $paramSet.Parameters | where Name -notin [Management.Automation.Cmdlet]::CommonParameters) {
                 $typeName = if ($param.ParameterType -ne [switch]) {
                     " <$($param.ParameterType.Name)>"
-                } 
+                }
                 else {
                     ''
                 }
@@ -65,7 +65,10 @@ function ConvertTo-HelpMarkdown {
                 }
                 else {
                     if ($param.IsMandatory) {
-                        "-$($param.Name)$typeName" } else { "[-$($param.Name)$typeName]"
+                        "-$($param.Name)$typeName"
+                    }
+                    else {
+                        "[-$($param.Name)$typeName]"
                     }
                 }
                 $token
@@ -76,11 +79,11 @@ function ConvertTo-HelpMarkdown {
         if ($syntaxText) {
             $sections.Add("## Syntax`n`n``````powershell`n$syntaxText`n``````")
         }
-        
+
         # Parameters
         if ($parameters) {
             $paramLines = [Collections.Generic.List[string]]::new()
-            $paramLines.Add("## Parameters")
+            $paramLines.Add('## Parameters')
 
             foreach ($param in $parameters) {
                 $paramSection = "### -$($param.Name)"
@@ -91,7 +94,7 @@ function ConvertTo-HelpMarkdown {
 
                 $bullets = [Collections.Generic.List[string]]::new()
 
-                if ($param.Type.Name){
+                if ($param.Type.Name) {
                     $bullets.Add("- **Type**: $($param.Type.Name)")
                 }
                 if ($param.Required) {
@@ -101,7 +104,7 @@ function ConvertTo-HelpMarkdown {
                     $bullets.Add("- **Position**: $($param.Position)")
                 }
 
-                $bullets.Add("- **Default value**: $(if ($param.defaultValue){
+                $bullets.Add("- **Default value**: $(if ($param.defaultValue) {
                     $param.defaultValue
                 }
                 else {
@@ -122,7 +125,7 @@ function ConvertTo-HelpMarkdown {
         # Examples
         if ($examples) {
             $exampleLines = [Collections.Generic.List[string]]::new()
-            $exampleLines.Add("## Examples")
+            $exampleLines.Add('## Examples')
 
             $i = 1
             foreach ($example in $examples) {
