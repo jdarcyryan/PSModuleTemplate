@@ -16,9 +16,9 @@ function Write-PSModuleDocs {
         Generates markdown documentation for all public functions in the PowerShell module.
 
         .DESCRIPTION
-        Builds the module, imports it, and generates markdown documentation for each public
-        function. Output files are written to the docs folder in the repository root, with
-        one file per function named <FunctionName>.md.
+        Imports the built module directly from the output manifest and generates markdown
+        documentation for each public function. Output files are written to the docs folder
+        in the repository root, with one file per function named <FunctionName>.md.
 
         .EXAMPLE
         Write-PSModuleDocs
@@ -32,16 +32,27 @@ function Write-PSModuleDocs {
     $outputModulePath = "$gitRoot\.output\$moduleName"
     $docsPath = "$gitRoot\docs"
 
-    # Verify module has built
     if (-not (Test-Path -Path $outputModulePath -PathType Container)) {
         throw "Module directory not found at: '$outputModulePath', run 'make build' to build the module."
     }
 
+    $versionFolder = Get-ChildItem -Path $outputModulePath -Directory | Sort-Object Name -Descending | Select-Object -First 1
+
+    if (-not $versionFolder) {
+        throw "No version folder found in '$outputModulePath', run 'make build' to build the module."
+    }
+
+    $manifestPath = "$($versionFolder.FullName)\$moduleName.psd1"
+
+    if (-not (Test-Path -Path $manifestPath -PathType Leaf)) {
+        throw "Module manifest not found at: '$manifestPath', run 'make build' to build the module."
+    }
+
     try {
-        Import-Module $outputModulePath -Force -ErrorAction Stop
+        Import-Module $manifestPath -Force -ErrorAction Stop
     }
     catch {
-        throw "Built module could not be imported at: '$outputModulePath', please run 'make build' to rebuild the module."
+        throw "Module could not be imported from '$manifestPath': $_"
     }
 
     try {
@@ -220,7 +231,7 @@ function Write-PSModuleDocs {
         Write-Host "Documentation written to '$docsPath' ($($docs.Count) file(s))." -ForegroundColor Green
     }
     finally {
-        Get-Module | Where-Object Path -like "$outputModulePath\*" | Remove-Module -ErrorAction SilentlyContinue
+        Get-Module -Name $moduleName -ErrorAction SilentlyContinue | Remove-Module -ErrorAction SilentlyContinue
     }
 }
 
