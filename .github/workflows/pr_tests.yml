@@ -9,6 +9,7 @@ on:
       - '!LICENSE'
       - '!Makefile'
       - '!.github/workflows/release.yml'
+      - '!docs/**'
   workflow_dispatch:
 
 permissions:
