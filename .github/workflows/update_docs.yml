@@ -45,9 +45,5 @@ jobs:
       - name: Commit Documentation Changes
         run: |
           git add docs/
-          if git diff --staged --quiet; then
-            echo "No documentation changes to commit"
-          else
-            git commit -m "AUTO: Exported Command Documentation"
-            git push origin ${{ github.head_ref }}
-          fi
+          git commit -m "AUTO: Exported Command Documentation"
+          git push origin ${{ github.head_ref }}
