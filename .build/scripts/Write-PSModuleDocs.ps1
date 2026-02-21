@@ -23,13 +23,15 @@ function ConvertTo-HelpMarkdown {
 
         $parameters = $help.parameters.parameter
         $examples = $help.examples.example
-        $alias = @(($allAlias | Where-Object ResolvedCommandName -eq $command.Name).Name)
+        $alias = @(($allAlias | where ResolvedCommandName -eq $command.Name).Name)
 
         $sections = [Collections.Generic.List[string]]::new()
 
         # Header
         $header = "# $($command.Name)"
-        if ($alias) { $header += " ($($alias -join ', '))" }
+        if ($alias) {
+            $header += " ($($alias -join ', '))"
+        }
         $sections.Add($header)
 
         # Synopsis
@@ -43,14 +45,28 @@ function ConvertTo-HelpMarkdown {
         }
 
         # Syntax
-        # Syntax
         $syntaxLines = foreach ($paramSet in $Command.ParameterSets) {
-            $paramStrings = foreach ($param in $paramSet.Parameters | Where-Object { $_.Name -notin [System.Management.Automation.Cmdlet]::CommonParameters }) {
-                $typeName = if ($param.ParameterType -ne [switch]) { " <$($param.ParameterType.Name)>" } else { '' }
+            $paramStrings = foreach ($param in $paramSet.Parameters | where Name -notin [Management.Automation.Cmdlet]::CommonParameters) {
+                $typeName = if ($param.ParameterType -ne [switch]) {
+                    " <$($param.ParameterType.Name)>"
+                } 
+                else {
+                    ''
+                }
                 $token = if ($param.Position -ge 0) {
-                    "[-$($param.Name)$typeName]" | ForEach-Object { if ($param.IsMandatory) { "[-$($param.Name)$typeName]" } else { "[[-$($param.Name)$typeName]]" } }
-                } else {
-                    if ($param.IsMandatory) { "-$($param.Name)$typeName" } else { "[-$($param.Name)$typeName]" }
+                    "[-$($param.Name)$typeName]" | foreach {
+                        if ($param.IsMandatory) {
+                            "[-$($param.Name)$typeName]"
+                        }
+                        else {
+                            "[[-$($param.Name)$typeName]]"
+                        }
+                    }
+                }
+                else {
+                    if ($param.IsMandatory) {
+                        "-$($param.Name)$typeName" } else { "[-$($param.Name)$typeName]"
+                    }
                 }
                 $token
             }
@@ -74,11 +90,27 @@ function ConvertTo-HelpMarkdown {
                 }
 
                 $bullets = [Collections.Generic.List[string]]::new()
-                if ($param.Type.Name)     { $bullets.Add("- **Type**: $($param.Type.Name)") }
-                if ($param.Required)      { $bullets.Add("- **Required**: $($param.Required)") }
-                if ($param.Position)      { $bullets.Add("- **Position**: $($param.Position)") }
-                $bullets.Add("- **Default value**: $(if ($param.defaultValue) { $param.defaultValue } else { 'None' })")
-                if ($param.pipelineInput) { $bullets.Add("- **Accepts pipeline input**: $($param.pipelineInput)") }
+
+                if ($param.Type.Name){
+                    $bullets.Add("- **Type**: $($param.Type.Name)")
+                }
+                if ($param.Required) {
+                    $bullets.Add("- **Required**: $($param.Required)")
+                }
+                if ($param.Position) {
+                    $bullets.Add("- **Position**: $($param.Position)")
+                }
+
+                $bullets.Add("- **Default value**: $(if ($param.defaultValue){
+                    $param.defaultValue
+                }
+                else {
+                    'None'
+                })")
+
+                if ($param.pipelineInput) {
+                    $bullets.Add("- **Accepts pipeline input**: $($param.pipelineInput)")
+                }
 
                 $paramSection += "`n`n$($bullets -join "`n")"
                 $paramLines.Add($paramSection)
