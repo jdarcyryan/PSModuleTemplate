@@ -116,10 +116,11 @@ function New-PSModule {
     $moduleFileExists = Test-Path -Path $moduleFilePath
     $action = if ($moduleFileExists) {
         'Overwrite file'
-    } else {
+    }
+    else {
         'Create file'
     }
-    
+
     if ($moduleFileExists) {
         if ($PSCmdlet.ShouldProcess($moduleFilePath, $action)) {
             if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing file?', $moduleFilePath)) {
@@ -141,17 +142,17 @@ function New-PSModule {
     else {
         'Create manifest'
     }
-    
+
     if ($manifestExists) {
         if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
             if ($ConfirmPreference -eq 'None' -or $PSCmdlet.ShouldContinue('Overwrite existing manifest?', $manifestFilePath)) {
-                New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
+                New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -RootModule "$moduleName.psm1" -FunctionsToExport @() -CmdletsToExport @() -VariablesToExport '' -AliasesToExport @() -Confirm:$false -WhatIf:$false
             }
         }
     }
     else {
         if ($PSCmdlet.ShouldProcess($manifestFilePath, $action)) {
-            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -Description $moduleName -RootModule "$moduleName.psm1" -Confirm:$false -WhatIf:$false
+            New-ModuleManifest -Path $manifestFilePath -ModuleVersion '0.1.0' -Description $moduleName -RootModule "$moduleName.psm1" -FunctionsToExport @() -CmdletsToExport @() -VariablesToExport '' -AliasesToExport @() -Confirm:$false -WhatIf:$false
         }
     }
 }
