@@ -129,10 +129,10 @@ function Publish-PSGalleryModule {
 
     try {
         # Get latest release from GitHub
-        Write-Verbose "Getting latest release from GitHub..."
+        Write-Verbose 'Getting latest release from GitHub...'
         $headers = @{
             'Authorization' = "Bearer $Token"
-            'Accept' = 'application/vnd.github.v3+json'
+            'Accept'        = 'application/vnd.github.v3+json'
         }
 
         $apiUrl = "https://api.github.com/repos/$Owner/$Repository/releases/latest"
@@ -177,53 +177,38 @@ function Publish-PSGalleryModule {
         # Extract module name and version from filename
         $packageName = [IO.Path]::GetFileNameWithoutExtension($nupkgAsset.name)
         $parts = $packageName -split '\.'
-        
+
         if ($parts.Count -lt 4) {
             throw "Unable to parse module name and version from package: $($nupkgAsset.name)"
         }
 
-        # Reconstruct module name (everything except last 3 parts which are version)
         $moduleName = ($parts[0..($parts.Count - 4)] -join '.')
         $version = ($parts[($parts.Count - 3)..($parts.Count - 1)] -join '.')
 
         Write-Verbose "Module: $moduleName"
         Write-Verbose "Version: $version"
 
-        # Publish to PowerShell Gallery
+        # Push to PowerShell Gallery
         if ($PSCmdlet.ShouldProcess($nupkgPath, 'Publish to PowerShell Gallery')) {
-            try {
-                Write-Verbose "Publishing to PowerShell Gallery..."
-                
-                # Use Publish-Module with -Path pointing to extracted module
-                # First extract the nupkg to get the module folder
-                $extractPath = "$tempPath\extracted"
-                New-Item -Path $extractPath -ItemType Directory -Force > $null
+            Write-Verbose 'Pushing package to PowerShell Gallery...'
 
-                # Rename .nupkg to .zip for extraction
-                $zipPath = "$tempPath\package.zip"
-                Copy-Item -Path $nupkgPath -Destination $zipPath
+            $pushArgs = @(
+                'nuget', 'push', $nupkgPath,
+                '--api-key', $ApiKey,
+                '--source', 'https://www.powershellgallery.com/api/v2/package'
+            )
 
-                # Extract the package
-                Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+            $pushOutput = & dotnet @pushArgs 2>&1
 
-                # Find the module folder in extracted content
-                $moduleFolder = Get-ChildItem -Path $extractPath -Directory | where Name -eq $moduleName | select -First 1
-
-                if (-not $moduleFolder) {
-                    throw "Module folder '$moduleName' not found in extracted package."
-                }
-
-                # Publish the module
-                Publish-Module -Path $moduleFolder.FullName -NuGetApiKey $ApiKey -Repository PSGallery -Force:$Force -Verbose:$false
-
-                Write-Host "Module '$moduleName' version '$version' published successfully to PowerShell Gallery." -ForegroundColor Green
-            }
-            catch {
-                if ($_.Exception.Message -match 'already exists') {
+            if ($LASTEXITCODE -ne 0) {
+                $outputText = $pushOutput -join "`n"
+                if ($outputText -match 'already exists') {
                     throw "Module '$moduleName' version '$version' already exists in PowerShell Gallery. Increment the version to publish a new version."
                 }
-                throw "Failed to publish to PowerShell Gallery: $_"
+                throw "Failed to publish to PowerShell Gallery: $outputText"
             }
+
+            Write-Host "Module '$moduleName' version '$version' published successfully to PowerShell Gallery." -ForegroundColor Green
         }
     }
     finally {
