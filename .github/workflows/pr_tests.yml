@@ -43,3 +43,7 @@ jobs:
       - name: Pester Tests
         shell: pwsh
         run: .\.build\scripts\Invoke-PSModulePester.ps1 -Verbose:$false
+
+      - name: Check Package Version
+        shell: pwsh
+        run: .\.build\scripts\Test-GitHubPackageVersion.ps1
