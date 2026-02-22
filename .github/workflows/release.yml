@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - '**.psd1'
-      - '!**/classes.psd1'
 
 permissions:
   actions: write
@@ -24,8 +21,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        with:
-            persist-credentials: false
 
       - name: Setup Profile
         shell: pwsh
