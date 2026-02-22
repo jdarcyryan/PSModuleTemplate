@@ -167,7 +167,7 @@ function Build-PSModule {
 
     # Create file hash
     $hashOutputPath = "$nupkgOutputPath.sha256"
-    $hashContent = Get-FileHash -Path $nupkgOutputPath -Algorithm SHA256 | select -ExpandProperty Hash
+    $hashContent = (Get-FileHash -Path $nupkgOutputPath -Algorithm SHA256).Hash
     Set-Content -Path $hashOutputPath -Value $hashContent -Encoding utf8 -NoNewline
 
     Write-Verbose "Module built successfully to: $nupkgOutputPath"
