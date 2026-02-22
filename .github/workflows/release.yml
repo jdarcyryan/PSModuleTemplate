@@ -5,9 +5,8 @@ on:
     branches:
       - master
     paths:
-      - '**.psd1'
+      - '**/*.psd1'
       - '!**/classes.psd1'
-  workflow_dispatch:
 
 permissions:
   actions: write
