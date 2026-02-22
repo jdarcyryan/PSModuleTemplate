@@ -163,7 +163,6 @@ function Publish-GitHubModule {
             "module_name=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
             "module_version=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
             "nupkg_path=.output/$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
-            "nupkghash_path=.output/$($nupkgFile.Name).sha256" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source
