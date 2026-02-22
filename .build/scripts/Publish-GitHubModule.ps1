@@ -162,7 +162,10 @@ function Publish-GitHubModule {
             # Set environment variables for release
             "module_name=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
             "module_version=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-            "nupkg_path=.output/$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+            $nupkgHash = (Get-FileHash -Path $nupkgFile.FullName -Algorithm SHA256).Hash
+            "nupkg_hash=$nupkgHash" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "nupkg_name=$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source
