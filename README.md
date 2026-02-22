@@ -64,7 +64,7 @@ make pester
 
 ## Custom Scripts
 
-For advanced scenarios that fall outside the standard module build process, three custom scripts are available.
+For advanced scenarios that fall outside the standard module build process, two custom scripts are available.
 These are intended for things like compiling native or foreign-language code, staging external binaries, or configuring specialised environments.
 
 ### Container Setup
@@ -73,17 +73,11 @@ These are intended for things like compiling native or foreign-language code, st
 
 Runs during environment or container initialisation. Use this for installing SDKs, runtimes, configuring environment variables, authenticating with external feeds, or validating toolchain versions before any build steps execute.
 
-### Pre Build
-
-`.build/scripts/Invoke-PreBuild.ps1`
-
-Runs immediately before the module build begins. Use this for compiling DLLs from C#, Rust, Go or other languages, generating or transforming source files, copying external binaries into the module source tree, or running pre-flight validation checks.
-
 ### Post Build
 
 `.build/scripts/Invoke-PostBuild.ps1`
 
-Runs after the module has been built to the output directory. Use this for copying compiled DLLs or native binaries into the output folder, embedding additional metadata, signing output binaries, or packaging extra assets alongside the nupkg.
+Runs after the module has been built to the output directory but before the nupkg is packed. Use this for copying compiled DLLs or native binaries into the output module folder, embedding additional metadata, signing output binaries, or staging any extra assets that need to be included in the final package.
 
 ## Pipelines
 
