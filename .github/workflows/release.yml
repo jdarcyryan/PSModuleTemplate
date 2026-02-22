@@ -48,8 +48,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.module_name }}-${{ env.module_version }}
-          name: ${{ env.module_name }}-${{ env.module_version }}
+          tag_name: ${{ env.module_version }}
+          name: ${{ env.module_version }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           prerelease: false
