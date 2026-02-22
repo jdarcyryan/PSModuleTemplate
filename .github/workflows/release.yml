@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - '**.psd1'
-      - '!**/classes.psd1'
 
 permissions:
   actions: write
