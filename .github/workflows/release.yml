@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+    paths:
+      - '**.psd1'
+      - '!**/classes.psd1'
 
 permissions:
   actions: write
@@ -31,6 +34,7 @@ jobs:
         run: .\.build\custom\Setup-Container.ps1
       
       - name: Build Module
+        shell: pwsh
         run: .\.build\scripts\Build-PSModule.ps1
       
       - name: Pester Tests
@@ -85,3 +89,15 @@ jobs:
           files: | 
             ${{ env.nupkg_path }}
             ${{ env.nupkghash_path }}
+
+      - name: Generate Documentation
+        shell: pwsh
+        run: .\.build\scripts\Write-PSModuleDocs.ps1
+
+      - name: Commit Documentation Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "DocsBot"
+          git add docs/
+          git commit -m "AUTO: Exported Command Documentation"
+          git push origin master
