@@ -42,5 +42,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "DocsBot"
           git add docs/
-          git diff --staged --quiet || git commit -m "AUTO: Exported Command Documentation"
+          git commit -m "AUTO: Exported Command Documentation"
           git push origin ${{ github.head_ref }}
