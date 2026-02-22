@@ -24,6 +24,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.head_ref }}
+          persist-credentials: false
 
       - name: Setup Profile
         shell: pwsh
