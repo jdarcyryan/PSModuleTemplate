@@ -141,6 +141,10 @@ function Build-PSModule {
         }
     }
 
+    # Execute post build script before packing nupkg
+    $postBuildScriptPath = "$gitRoot\.build\custom\Invoke-PostBuild.ps1"
+    & $postBuildScriptPath
+
     # Compile to nupkg (run in isolated scope to suppress all output)
     $savedGlobalVerbose = $global:VerbosePreference
 
