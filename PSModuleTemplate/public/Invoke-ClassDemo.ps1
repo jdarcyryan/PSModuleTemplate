@@ -38,7 +38,7 @@ function Invoke-ClassDemo {
         $SecondNumber = 5,
 
         [string]
-        $TestString = "Hello World"
+        $TestString = "Hello Worlds"
     )
 
     # Create an instance of the PowerShell class
