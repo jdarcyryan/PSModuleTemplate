@@ -98,6 +98,16 @@ __Note__: _this will fail if the version is not bumped, or if the current versio
 After merging to master, markdown files for each public function in the module will be created.
 Ensure Get-Help is accurate and populated, as this will be referenced to create the documentation.
 
+## PowerShell Gallery
+
+Modules are not automatically published to PowerShell Gallery as part of the pipeline.
+
+To publish, you will need to manually start the Publish to PowerShell Gallery workflow, this will publish the latest release version.
+
+### Prerequisites
+
+- A [PowerShell Gallery API key](https://www.powershellgallery.com/account/apikeys) as a secret named PSGALLERY_API_KEY
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING](CONTRIBUTING.md) for details on how to contribute to this project.
