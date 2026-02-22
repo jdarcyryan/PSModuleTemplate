@@ -30,7 +30,6 @@ Use this template to quickly bootstrap new PowerShell module projects with indus
 Click the '[Use this template](https://github.com/jdarcyryan/PSModuleTemplate/generate)' button at the top of this repository to create a new repository based on this template.
 
 ### Quick Start
-
 ```bash
 # Clone your new repository
 git clone https://github.com/OWNER/MODULE_NAME.git
@@ -62,6 +61,23 @@ This runs all pester tests against the built module.
 ```bash
 make pester
 ```
+
+## Custom Scripts
+
+For advanced scenarios that fall outside the standard module build process, two custom scripts are available.
+These are intended for things like compiling native or foreign-language code, staging external binaries, or configuring specialised environments.
+
+### Container Setup
+
+`.build/scripts/Setup-Container.ps1`
+
+Runs during environment or container initialisation. Use this for installing SDKs, runtimes, configuring environment variables, authenticating with external feeds, or validating toolchain versions before any build steps execute.
+
+### Post Build
+
+`.build/scripts/Invoke-PostBuild.ps1`
+
+Runs after the module has been built to the output directory but before the nupkg is packed. Use this for copying compiled DLLs or native binaries into the output module folder, embedding additional metadata, signing output binaries, or staging any extra assets that need to be included in the final package.
 
 ## Pipelines
 
