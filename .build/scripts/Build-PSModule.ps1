@@ -148,6 +148,10 @@ function Build-PSModule {
     # Compile to nupkg (run in isolated scope to suppress all output)
     $savedGlobalVerbose = $global:VerbosePreference
 
+    # Compress to zip
+    $zipOutputPath = "$outputPath\$moduleName.zip"
+    Compress-Archive -Path $outputModulePath -DestinationPath $zipOutputPath -Verbose:$false
+
     $nupkgOutputPath = & {
         $VerbosePreference = 'SilentlyContinue'
         $global:VerbosePreference = 'SilentlyContinue'
@@ -168,6 +172,13 @@ function Build-PSModule {
     }
     
     $global:VerbosePreference = $savedGlobalVerbose
+
+    # Hashes
+    $algorithm = 'sha256'
+    $zipOutputPath, $nupkgOutputPath | foreach {
+        $hash = (Get-FileHash -Path $_ -Algorithm $algorithm).Hash
+        Set-Content -Path "$_.$algorithm" -Value $hash -NoNewline -Encoding utf8
+    }
 
     Write-Verbose "Module built successfully to: $nupkgOutputPath"
 }
