@@ -160,12 +160,20 @@ function Publish-GitHubModule {
             Write-Verbose "Package URL: https://github.com/$Owner/$Repository/packages"
 
             # Set environment variables for release
-            "module_name=$ModuleName" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "module_name=$moduleName" | Out-File -FilePath $env:GITHUB_ENV -Append
             "module_version=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-            $nupkgHash = (Get-FileHash -Path $nupkgFile.FullName -Algorithm SHA256).Hash
-            "nupkg_hash=$nupkgHash" | Out-File -FilePath $env:GITHUB_ENV -Append
-            "nupkg_name=$($nupkgFile.Name)" | Out-File -FilePath $env:GITHUB_ENV -Append
+            $nupkgRelPath = ".output/$moduleName.$version.nupkg"
+            $zipRelPath = ".output/$moduleName.zip"
+            $algorithm = 'sha256'
+            $nupkgHashPath, $zipHashPath = $nupkgRelPath, $zipRelPath | foreach {
+                "$_.$algorithm"
+            }
+
+            "nupkg_path=$nupkgRelPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "zip_path=$zipRelPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "nupkg_hash_path=$nupkgHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "zip_hash_path=$zipHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source
