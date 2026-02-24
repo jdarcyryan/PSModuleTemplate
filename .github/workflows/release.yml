@@ -89,7 +89,9 @@ jobs:
 
             ## Documentation
 
-            [${{ env.module_name }}/${{ env.module_version }}/docs](https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}/tree/${{ github.sha }}/docs)
+            ${{ env.docs_release_md }}
+
+            Snapshot: *[${{ env.module_name }}/${{ env.module_version }}](${{ env.repo_url_snapshot }})*
 
             ---
             

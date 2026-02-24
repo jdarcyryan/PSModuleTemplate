@@ -174,6 +174,14 @@ function Publish-GitHubModule {
             "zip_path=$zipRelPath" | Out-File -FilePath $env:GITHUB_ENV -Append
             "nupkg_hash_path=$nupkgHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
             "zip_hash_path=$zipHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+            $repoUrlSnapshot = "https://github.com/$env:GITHUB_OWNER/$env:GITHUB_REPOSITORY/tree/$env:GITHUB_SHA"
+            $documentationMd = (Get-ChildItem -Path '.\docs' | foreach {
+                "* [$($_.BaseName)]($repoUrlSnapshot/docs/$($_.Name))"
+            }) -join "`n"
+
+            "repo_url_snapshot=$repoUrlSnapshot" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "docs_release_md=$documentationMd" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
         finally {
             # Clean up - remove the source
