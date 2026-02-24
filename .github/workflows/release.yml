@@ -91,7 +91,7 @@ jobs:
 
             ${{ env.docs_release_md }}
 
-            Snapshot: [${{ env.module_name }}/${{ env.module_version }}](${{ env.repo_url_snapshot }})
+            **Snapshot**: [${{ env.module_name }}/${{ env.module_version }}](${{ env.repo_url_snapshot }})
 
             ---
             
