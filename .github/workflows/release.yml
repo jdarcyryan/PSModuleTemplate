@@ -91,3 +91,4 @@ jobs:
             ${{ env.nupkg_hash_path }}
             ${{ env.zip_path }}
             ${{ env.zip_hash_path }}
+            docs/*.md
