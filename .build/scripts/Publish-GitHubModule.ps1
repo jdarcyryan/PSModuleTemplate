@@ -76,6 +76,10 @@ function Publish-GitHubModule {
         [string]
         $Token = $env:GITHUB_TOKEN,
 
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Sha = $env:GITHUB_SHA,
+
         [switch]
         $Force
     )
@@ -175,7 +179,7 @@ function Publish-GitHubModule {
             "nupkg_hash_path=$nupkgHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
             "zip_hash_path=$zipHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-            $repoUrlSnapshot = "https://github.com/$env:GITHUB_OWNER/$env:GITHUB_REPOSITORY/tree/$env:GITHUB_SHA"
+            $repoUrlSnapshot = "https://github.com/$Owner/$Repository/tree/$Sha"
             $documentationMd = (Get-ChildItem -Path '.\docs' | foreach {
                 "* [$($_.BaseName)]($repoUrlSnapshot/docs/$($_.Name))"
             }) -join "`n"
