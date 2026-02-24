@@ -179,7 +179,7 @@ function Publish-GitHubModule {
             "nupkg_hash_path=$nupkgHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
             "zip_hash_path=$zipHashPath" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-            $repoUrlSnapshot = "https://github.com/$Owner/$Repository/tree/$Sha"
+            $repoUrlSnapshot = "https://github.com/$Repository/tree/$Sha"
             $documentationMd = (Get-ChildItem -Path '.\docs' | foreach {
                 "* [$($_.BaseName)]($repoUrlSnapshot/docs/$($_.Name))"
             }) -join "`n"
