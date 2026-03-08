@@ -45,6 +45,10 @@ if (Test-Path -Path $classesDataFilePath) {
                 # Process CSharp classes
                 Add-Type -Path $currentClassPath
             }
+            '.dll' {
+                # Process DLLs
+                Add-Type -Path $currentClassPath
+            }
             default {
                 throw "Unable to process class '$_', $extension is an unsupported file type."
             }
