@@ -36,7 +36,7 @@ function Write-PSModuleDocs {
         throw "Module directory not found at: '$outputModulePath', run 'make build' to build the module."
     }
 
-    $versionFolder = Get-ChildItem -Path $outputModulePath -Directory | Sort-Object Name -Descending | Select-Object -First 1
+    $versionFolder = Get-ChildItem -Path $outputModulePath -Directory | sort Name -Descending | select -First 1
 
     if (-not $versionFolder) {
         throw "No version folder found in '$outputModulePath', run 'make build' to build the module."
@@ -213,11 +213,11 @@ function Write-PSModuleDocs {
             Get-ChildItem -Path $docsPath -File | Remove-Item -Force
         }
         else {
-            $null = New-Item -Path $docsPath -ItemType Directory -Force
+            New-Item -Path $docsPath -ItemType Directory -Force >$null
         }
 
         if ($docs.Count -eq 0) {
-            $null = New-Item -Path "$docsPath\.gitkeep" -ItemType File -Force
+            New-Item -Path "$docsPath\.gitkeep" -ItemType File -Force >$null
             Write-Verbose 'No documentation generated; created .gitkeep in docs folder.'
             return
         }
