@@ -159,13 +159,13 @@ function Build-PSModule {
         $ConfirmPreference = 'None'
         $WhatIfPreference = $false
 
-        Register-PSRepository -Name BuildOutput -SourceLocation $outputPath -PublishLocation $outputPath -InstallationPolicy Trusted *>$null
+        Register-PSResourceRepository -Name BuildOutput -Uri $outputPath -Trusted *>$null
 
         try {
-            Publish-Module -Path $outputModulePath -Repository BuildOutput -Force -SkipDependencyCheck *>$null
+            Publish-PSResource -Path $outputModulePath -Repository BuildOutput -SkipDependenciesCheck *>$null
         }
         finally {
-            Unregister-PSRepository -Name BuildOutput *>$null
+            Unregister-PSResourceRepository -Name BuildOutput *>$null
         }
 
         return "$outputPath\$moduleName.$version.nupkg"
