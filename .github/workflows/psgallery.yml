@@ -1,0 +1,57 @@
+name: Publish to PSGallery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to PSGallery
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Latest Release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release=$(gh api repos/${{ github.repository }}/releases/latest)
+          tag=$(echo "$release" | jq -r '.tag_name')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          asset_url=$(echo "$release" | jq -r '.assets[] | select(.name | endswith(".nupkg")) | .url')
+          if [[ -z "$asset_url" ]]; then
+            echo "::error::No .nupkg asset found in release $tag"
+            exit 1
+          fi
+
+          asset_name=$(echo "$release" | jq -r '.assets[] | select(.name | endswith(".nupkg")) | .name')
+          echo "asset_url=$asset_url" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$asset_name" >> "$GITHUB_OUTPUT"
+          echo "Found $asset_name in release $tag"
+
+      - name: Download Latest Module
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fSL \
+            -H "Accept: application/octet-stream" \
+            -H "Authorization: token $GH_TOKEN" \
+            "${{ steps.release.outputs.asset_url }}" \
+            -o "${{ steps.release.outputs.asset_name }}"
+
+      - name: Publish to PSGallery
+        env:
+          PS_GALLERY_API_KEY: ${{ secrets.PS_GALLERY_API_KEY }}
+        run: |
+          if [[ -z "$PS_GALLERY_API_KEY" ]]; then
+            echo "::error::PS_GALLERY_API_KEY secret is not set at repo or org level"
+            exit 1
+          fi
+
+          dotnet nuget push "${{ steps.release.outputs.asset_name }}" \
+            --api-key "$PS_GALLERY_API_KEY" \
+            --source https://www.powershellgallery.com/api/v2/package \
+            --dry-run
