@@ -19,9 +19,10 @@ function Invoke-PSModulePSDepend {
     $psDependModulePath = "$PSScriptRoot\..\modules\PSDepend"
     $psDependManifestPath = "$gitRoot\PSDepend.psd1"
 
-    # Verify PSDepend manifest exists
+    # Skip if no PSDepend manifest exists
     if (-not (Test-Path -Path $psDependManifestPath -PathType Leaf)) {
-        throw "PSDepend manifest not found at: '$psDependManifestPath'."
+        Write-Verbose "No PSDepend manifest found at '$psDependManifestPath', skipping dependency installation."
+        return
     }
 
     # Verify PSDepend module exists
