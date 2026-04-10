@@ -53,5 +53,4 @@ jobs:
 
           dotnet nuget push "${{ steps.release.outputs.asset_name }}" \
             --api-key "$PSGALLERY_API_KEY" \
-            --source https://www.powershellgallery.com/api/v2/package \
-            --dry-run
+            --source https://www.powershellgallery.com/api/v2/package
