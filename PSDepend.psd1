@@ -1,0 +1,3 @@
+@{
+    'Microsoft.Windows.ConsoleGuiTools' = 'latest'
+}
