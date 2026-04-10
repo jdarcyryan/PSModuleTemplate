@@ -69,7 +69,7 @@ These are intended for things like compiling native or foreign-language code, st
 
 ### Container Setup
 
-`.build/scripts/Setup-Container.ps1`
+`.build/scripts/Invoke-ContainerSetup.ps1`
 
 Runs during environment or container initialisation. Use this for installing SDKs, runtimes, configuring environment variables, authenticating with external feeds, or validating toolchain versions before any build steps execute.
 
