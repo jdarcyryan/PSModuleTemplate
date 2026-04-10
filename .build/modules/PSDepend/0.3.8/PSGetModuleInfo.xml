@@ -1,0 +1,139 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">PSDepend</S>
+      <S N="Version">0.3.8</S>
+      <S N="Type">Module</S>
+      <S N="Description">PowerShell Dependency Handler</S>
+      <S N="Author">Warren Frame</S>
+      <S N="CompanyName">ramblingcookiemonster</S>
+      <S N="Copyright">(c) 2016 Warren F. All rights reserved.</S>
+      <DT N="PublishedDate">2020-07-05T00:54:32+01:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://github.com/RamblingCookieMonster/PSDepend/blob/master/LICENSE</URI>
+      <URI N="ProjectUri">https://github.com/RamblingCookieMonster/PSDepend/</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>requirements</S>
+          <S>dependencies</S>
+          <S>dependency</S>
+          <S>manager</S>
+          <S>bundle</S>
+          <S>package</S>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="2">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">DscResource</S>
+            <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-Dependency</S>
+                <S>Get-PSDependScript</S>
+                <S>Get-PSDependType</S>
+                <S>Import-Dependency</S>
+                <S>Install-Dependency</S>
+                <S>Invoke-DependencyScript</S>
+                <S>Invoke-PSDepend</S>
+                <S>Test-Dependency</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-Dependency</S>
+                <S>Get-PSDependScript</S>
+                <S>Get-PSDependType</S>
+                <S>Import-Dependency</S>
+                <S>Install-Dependency</S>
+                <S>Invoke-DependencyScript</S>
+                <S>Invoke-PSDepend</S>
+                <S>Test-Dependency</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">Added various PowerShell Core fixes thanks to @lipkau!</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="1" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="7">
+        <TN RefId="3">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">(c) 2016 Warren F. All rights reserved.</S>
+          <S N="description">PowerShell Dependency Handler</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="releaseNotes">Added various PowerShell Core fixes thanks to @lipkau!</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">1337690</S>
+          <S N="downloadCount">1695967</S>
+          <S N="packageSize">78660</S>
+          <S N="published">05/07/2020 00:54:32 +01:00</S>
+          <S N="created">05/07/2020 00:54:32 +01:00</S>
+          <S N="lastUpdated">10/04/2026 12:20:04 +01:00</S>
+          <S N="tags">requirements dependencies dependency manager bundle package PSModule PSFunction_Get-Dependency PSCommand_Get-Dependency PSFunction_Get-PSDependScript PSCommand_Get-PSDependScript PSFunction_Get-PSDependType PSCommand_Get-PSDependType PSFunction_Import-Dependency PSCommand_Import-Dependency PSFunction_Install-Dependency PSCommand_Install-Dependency PSFunction_Invoke-DependencyScript PSCommand_Invoke-DependencyScript PSFunction_Invoke-PSDepend PSCommand_Invoke-PSDepend PSFunction_Test-Dependency PSCommand_Test-Dependency PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2026-04-10T12:20:04Z</S>
+          <S N="NormalizedVersion">0.3.8</S>
+          <S N="Authors">Warren Frame</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">PSDepend.nuspec|PSDepend.Config|PSDepend.Format.ps1xml|PSDepend.psd1|PSDepend.psm1|PSDependMap.psd1|en-US\about_PSDepend.help.txt|en-US\about_PSDepend_Definitions.help.txt|Private\Add-ObjectDetail.ps1|Private\Add-ToItemCollection.ps1|Private\Add-ToPsModulePathIfRequired.ps1|Private\Bootstrap-Nuget.ps1|Private\Find-NugetPackage.ps1|Private\Get-ClonedObject.ps1|Private\Get-Hash.ps1|Private\Get-NodeModule.ps1|Private\Get-Parameter.ps1|Private\Get-ParameterName.ps1|Private\Get-ProjectDetail.ps1|Private\Get-PropertyOrder.ps1|Private\Get-TaggedDependency.ps1|Private\Get-TopologicalSort.ps1|Private\Get-WebFile.ps1|Private\Import-PSDependModule.ps1|Private\Install-Dotnet.ps1|Private\Install-NodeModule.ps1|Private\Invoke-ExternalCommand.ps1|Private\Resolve-DependScripts.ps1|Private\Save-NugetPackage.ps1|Private\SemanticVersion.ps1|Private\Sort-PSDependency.ps1|Private\Sort-WithCustomList.ps1|Private\Test-Dotnet.ps1|Private\Test-PlatformSupport.ps1|Private\Validate-DependencyParameters.ps1|PSDependScripts\Chocolatey.ps1|PSDependScripts\Command.ps1|PSDependScripts\DotnetSdk.ps1|PSDependScripts\FileDownload.ps1|PSDependScripts\FileSystem.ps1|PSDependScripts\Git.ps1|PSDependScripts\GitHub.ps1|PSDependScripts\Noop.ps1|PSDependScripts\Npm.ps1|PSDependScripts\Nuget.ps1|PSDependScripts\Package.ps1|PSDependScripts\PSGalleryModule.ps1|PSDependScripts\PSGalleryNuget.ps1|PSDependScripts\Task.ps1|Public\Get-Dependency.ps1|Public\Get-PSDependScript.ps1|Public\Get-PSDependType.ps1|Public\Import-Dependency.ps1|Public\Install-Dependency.ps1|Public\Invoke-DependencyScript.ps1|Public\Invoke-PSDepend.ps1|Public\Test-Dependency.ps1</S>
+          <S N="GUID">63ea9e2a-320d-43ff-a11a-4930ca03cce6</S>
+          <S N="PowerShellVersion">3.0</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\James\Documents\PSDepend\0.3.8</S>
+    </MS>
+  </Obj>
+</Objs>
