@@ -1,3 +1,3 @@
 @{
-    'Microsoft.Windows.ConsoleGuiTools' = 'latest'
+    'Microsoft.PowerShell.ConsoleGuiTools' = 'latest'
 }
