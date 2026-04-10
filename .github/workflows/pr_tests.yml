@@ -37,6 +37,10 @@ jobs:
         shell: pwsh
         run: .\.build\custom\Invoke-ContainerSetup.ps1
       
+      - name: Install Dependencies
+        shell: pwsh
+        run: .\.build\scripts\Invoke-PSModulePSDepend.ps1
+      
       - name: Build Module
         run: .\.build\scripts\Build-PSModule.ps1
       
