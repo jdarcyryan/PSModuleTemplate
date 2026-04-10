@@ -12,6 +12,7 @@ Use this template to quickly bootstrap new PowerShell module projects with indus
 - Pre-configured module structure
 - Easy building and testing with make
 - Pester testing framework integration
+- Dependency management with PSDepend
 - GitHub Actions CI/CD workflows
 - C# class support
 - Automatic documentation
@@ -48,6 +49,14 @@ This creates a folder with the repository name, housing the module files/folders
 make setup
 ```
 
+### Installing dependencies
+
+This installs any required modules defined in `PSDepend.psd1` at the root of your repository.
+If no `PSDepend.psd1` file exists, this step is skipped gracefully.
+```bash
+make depend
+```
+
 ### Perform a build
 
 This builds a nupkg from your source code into the .output folder.
@@ -61,6 +70,23 @@ This runs all pester tests against the built module.
 ```bash
 make pester
 ```
+
+## Dependencies
+
+Module dependencies are managed using [PSDepend](https://github.com/RamblingCookieMonster/PSDepend).
+To declare dependencies, create or edit the `PSDepend.psd1` file in the root of your repository.
+
+A simple example that installs the latest version of a module from PSGallery:
+```powershell
+@{
+    'Microsoft.PowerShell.ConsoleGuiTools' = 'latest'
+}
+```
+
+You can also pin versions, use hashtable format for more control, or pull from Git repositories.
+See the comments in the included `PSDepend.psd1` template for all supported options.
+
+Any modules listed in `PSDepend.psd1` should also be added to `RequiredModules` in your module manifest so that PowerShell enforces the dependency at import time.
 
 ## Custom Scripts
 
