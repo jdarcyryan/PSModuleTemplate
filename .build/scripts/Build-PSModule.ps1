@@ -162,7 +162,7 @@ function Build-PSModule {
         Register-PSRepository -Name BuildOutput -SourceLocation $outputPath -PublishLocation $outputPath -InstallationPolicy Trusted *>$null
 
         try {
-            Publish-Module -Path $outputModulePath -Repository BuildOutput -Force *>$null
+            Publish-Module -Path $outputModulePath -Repository BuildOutput -Force -SkipDependencyCheck *>$null
         }
         finally {
             Unregister-PSRepository -Name BuildOutput *>$null
