@@ -44,14 +44,14 @@ jobs:
 
       - name: Publish to PSGallery
         env:
-          PS_GALLERY_API_KEY: ${{ secrets.PS_GALLERY_API_KEY }}
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
         run: |
-          if [[ -z "$PS_GALLERY_API_KEY" ]]; then
-            echo "::error::PS_GALLERY_API_KEY secret is not set at repo or org level"
+          if [[ -z "$PSGALLERY_API_KEY" ]]; then
+            echo "::error::PSGALLERY_API_KEY secret is not set at repo or org level"
             exit 1
           fi
 
           dotnet nuget push "${{ steps.release.outputs.asset_name }}" \
-            --api-key "$PS_GALLERY_API_KEY" \
+            --api-key "$PSGALLERY_API_KEY" \
             --source https://www.powershellgallery.com/api/v2/package \
             --dry-run
