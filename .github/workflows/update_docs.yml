@@ -27,11 +27,11 @@ jobs:
 
       - name: Setup Profile
         shell: pwsh
-        run: .\.build\scripts\Setup-RunnerProfile.ps1 -Verbose
+        run: .\.build\scripts\Invoke-RunnerProfileSetup.ps1 -Verbose
 
       - name: Setup Container (Custom)
         shell: pwsh
-        run: .\.build\custom\Setup-Container.ps1
+        run: .\.build\custom\Invoke-ContainerSetup.ps1
       
       - name: Build Module
         shell: pwsh

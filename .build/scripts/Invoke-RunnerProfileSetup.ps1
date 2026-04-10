@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Setup-RunnerProfile {
+function Invoke-RunnerProfileSetup {
     [CmdletBinding()]
     <#
     .SYNOPSIS
@@ -45,7 +45,7 @@ function Setup-RunnerProfile {
 }
 
 try {
-    Setup-RunnerProfile @PSBoundParameters
+    Invoke-RunnerProfileSetup @PSBoundParameters
 }
 catch {
     Write-Host $_ -ForegroundColor Red
