@@ -119,6 +119,17 @@ It will produce release notes, changelog and a nupkg in GitHub packages.
 
 __Note__: _this will fail if the version is not bumped, or if the current version already exists as a release or package._
 
+### Publish to PSGallery
+
+A manually triggered workflow is available to publish your module to the [PowerShell Gallery](https://www.powershellgallery.com/).
+This workflow downloads the `.nupkg` from the latest GitHub release and pushes it to PSGallery.
+
+To use this workflow:
+
+1. Ensure a GitHub release exists with a `.nupkg` asset (created automatically by the merge to master pipeline).
+2. Add a `PSGALLERY_API_KEY` secret to your repository or organisation. You can generate an API key from your [PSGallery account](https://www.powershellgallery.com/account).
+3. Navigate to the **Actions** tab, select the **Publish to PSGallery** workflow, and click **Run workflow**.
+
 ### After merge
 
 After merging to master, markdown files for each public function in the module will be created.

@@ -16,6 +16,7 @@ permissions:
 jobs:
   release-module:
     runs-on: windows-latest
+    if: github.event.before != '0000000000000000000000000000000000000000'
     
     env:
       GITHUB_OWNER: ${{ github.repository_owner }}
