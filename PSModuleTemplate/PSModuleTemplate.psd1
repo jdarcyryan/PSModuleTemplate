@@ -24,10 +24,10 @@ GUID = '3101ef4b-0651-47b8-ac62-adbe531f52fe'
 Author = 'jdarcyryan'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'jdarcyryan'
 
 # Copyright statement for this module
-Copyright = '(c) jdarcyryan. All rights reserved.'
+Copyright = 'Apache 2.0 License'
 
 # Description of the functionality provided by this module
 Description = 'PSModuleTemplate'
