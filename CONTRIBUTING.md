@@ -45,6 +45,12 @@ make setup
 ```
 This will set up an example module for testing.
 
+#### Install Dependencies
+```bash
+make depend
+```
+This installs any required modules defined in `PSDepend.psd1`. If your changes add a new module dependency, make sure it is listed in both `PSDepend.psd1` and in `RequiredModules` in the module manifest.
+
 #### Build the Module
 ```bash
 make build
@@ -61,6 +67,7 @@ All tests should pass before submitting your pull request.
 
 - **If you modify Pester tests**: Create example functions and ensure to reference GitHub Actions runs on your forked repository
 - **If you modify scripts or workflows**: Verify that the associated pipelines run correctly in your fork
+- **If you add dependencies**: Ensure they are declared in both `PSDepend.psd1` and `RequiredModules` in the module manifest
 
 ### 6. Commit Your Changes
 
