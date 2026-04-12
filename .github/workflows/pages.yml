@@ -98,6 +98,17 @@ jobs:
             [ -f "$lf" ] && cp "$lf" "${STAGE}/"
           done
 
+          # Copy assets/ folder if it exists (favicon, images, etc.)
+          if [ -d "assets" ]; then
+            mkdir -p "${STAGE}/assets"
+            find ./assets -type f \( -name '*.svg' -o -name '*.png' -o -name '*.ico' -o -name '*.jpg' -o -name '*.webp' \) \
+              | while read -r f; do
+                  dest="${STAGE}/${f#./}"
+                  mkdir -p "$(dirname "$dest")"
+                  cp "$f" "$dest"
+                done
+          fi
+
           find "${STAGE}" -name '.gitkeep' -delete
 
           echo "Staged files:"
@@ -131,7 +142,7 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>{{ page.title | default: site.title }}</title>
-            <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/PowerShell/PowerShell/master/assets/ps_black_128.svg">
+            <link rel="icon" type="image/svg+xml" href="{{ 'assets/favicon.svg' | relative_url }}">
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
             <style>
