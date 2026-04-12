@@ -46,31 +46,19 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           echo "Repository is private — removing existing Pages deployments"
-
-          # List all deployments in the github-pages environment
           DEPLOYMENTS=$(gh api "repos/${REPO}/deployments?environment=github-pages&per_page=100" --jq '.[].id' 2>/dev/null || true)
-
           if [ -z "$DEPLOYMENTS" ]; then
             echo "No existing Pages deployments found"
             exit 0
           fi
-
-          # Mark each deployment as inactive, then delete it
           for ID in $DEPLOYMENTS; do
             echo "Deactivating deployment ${ID}..."
-            gh api \
-              --method POST \
-              -H "Accept: application/vnd.github+json" \
-              "repos/${REPO}/deployments/${ID}/statuses" \
-              -f state=inactive 2>/dev/null || true
-
+            gh api --method POST -H "Accept: application/vnd.github+json" \
+              "repos/${REPO}/deployments/${ID}/statuses" -f state=inactive 2>/dev/null || true
             echo "Deleting deployment ${ID}..."
-            gh api \
-              --method DELETE \
-              -H "Accept: application/vnd.github+json" \
+            gh api --method DELETE -H "Accept: application/vnd.github+json" \
               "repos/${REPO}/deployments/${ID}" 2>/dev/null || true
           done
-
           echo "All Pages deployments removed"
 
   # ── Build (only if public) ──────────────────────────────────────
@@ -98,13 +86,8 @@ jobs:
           STAGE="_site_source"
 
           echo "::group::Staging allowed files"
-
-          # ── Stage ONLY allowed files into a clean directory ───────────
-          # Whitelist: *.md files + LICENSE + LICENSE.txt
-          # Everything else is excluded from the site.
           mkdir -p "${STAGE}"
 
-          # Copy all .md files preserving directory structure
           find . -name '*.md' \
             -not -path './.git/*' \
             -not -path "./${STAGE}/*" \
@@ -114,19 +97,16 @@ jobs:
                 cp "$f" "$dest"
               done
 
-          # Copy LICENSE files (plain text)
           for lf in LICENSE LICENSE.txt; do
             [ -f "$lf" ] && cp "$lf" "${STAGE}/"
           done
 
-          # Remove any .gitkeep files that got copied
           find "${STAGE}" -name '.gitkeep' -delete
 
           echo "Staged files:"
           find "${STAGE}" -type f | sort
           echo "::endgroup::"
 
-          # ── Everything below operates inside the staging dir ──────────
           cd "${STAGE}"
 
           echo "::group::Generating Jekyll config and layout"
@@ -156,8 +136,10 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>{{ page.title | default: site.title }}</title>
+            <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/PowerShell/PowerShell/refs/heads/master/assets/ps_black_128.svg">
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
             <style>
               :root{
                 --bg-page:#f6f8fa;--bg-content:#fff;--bg-header:#fff;--bg-code:#f6f8fa;
@@ -201,10 +183,10 @@ jobs:
               .content img{max-width:100%}
               .content strong{color:var(--text-primary)}
               .release{border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
-              .release summary{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;list-style:none}
-              .release summary::-webkit-details-marker{display:none}
-              .release summary::before{content:'';display:inline-block;width:0;height:0;border-left:5px solid var(--text-muted);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.15s}
-              .release[open] summary::before{transform:rotate(90deg)}
+              .release>summary{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;list-style:none}
+              .release>summary::-webkit-details-marker{display:none}
+              .release>summary::before{content:'';display:inline-block;width:0;height:0;border-left:5px solid var(--text-muted);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.15s}
+              .release[open]>summary::before{transform:rotate(90deg)}
               .release-tag{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--link)}
               .release-date{font-size:13px;color:var(--text-muted)}
               .release-latest{font-size:11px;padding:2px 8px;border-radius:16px;background:var(--badge-bg);color:var(--badge-text);font-weight:500}
@@ -216,11 +198,28 @@ jobs:
               .release-body code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg-code);padding:2px 4px;border-radius:3px}
               .release-body pre code{background:transparent;padding:0}
               .release-assets{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
-              .release-assets summary{padding:0;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-primary);list-style:revert}
-              .release-assets summary::-webkit-details-marker{display:revert}
-              .release-assets summary::before{display:none}
-              .release-asset{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-secondary);padding:3px 0}
+              .release-assets>summary{padding:0;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-primary);list-style:none;display:flex;align-items:center;gap:6px}
+              .release-assets>summary::-webkit-details-marker{display:none}
+              .release-assets>summary::before{content:'';display:inline-block;width:0;height:0;border-left:4px solid var(--text-muted);border-top:3px solid transparent;border-bottom:3px solid transparent;transition:transform 0.15s}
+              .release-assets[open]>summary::before{transform:rotate(90deg)}
+              .release-asset{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-secondary);padding:3px 0;padding-left:10px}
               .loading{text-align:center;padding:32px;color:var(--text-muted);font-size:14px}
+              .code-block-wrap{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0 16px}
+              .code-block-wrap .lang-label{font-size:11px;color:var(--text-muted);padding:4px 12px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
+              .code-block-wrap pre{margin:0;border:none;border-radius:0}
+              pre[class*="language-"],code[class*="language-"]{font-family:'IBM Plex Mono',monospace;font-size:13px}
+              pre[class*="language-"]{background:var(--bg-code);margin:0;padding:12px 16px}
+              @media(prefers-color-scheme:dark){
+                pre[class*="language-"],code[class*="language-"]{color:var(--text-primary)}
+                .token.comment,.token.prolog,.token.doctype,.token.cdata{color:#8b949e}
+                .token.punctuation{color:#8b949e}
+                .token.property,.token.tag,.token.boolean,.token.number,.token.constant,.token.symbol,.token.deleted{color:#ff7b72}
+                .token.selector,.token.attr-name,.token.string,.token.char,.token.builtin,.token.inserted{color:#a5d6ff}
+                .token.operator,.token.entity,.token.url{color:#79c0ff}
+                .token.atrule,.token.attr-value,.token.keyword{color:#d2a8ff}
+                .token.function,.token.class-name{color:#d2a8ff}
+                .token.regex,.token.important,.token.variable{color:#ffa657}
+              }
               @media(max-width:640px){.site-header{padding:12px 16px}.container{padding:0 12px;margin:16px auto}.content{padding:20px}}
             </style>
           </head>
@@ -241,6 +240,15 @@ jobs:
             <main class="container">
               <div class="content">{{ content }}</div>
             </main>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
           </body>
           </html>
           LAYOUTEOF
@@ -312,6 +320,7 @@ jobs:
           (async function() {
             var c = document.getElementById('releases-container');
             var repo = c.getAttribute('data-repo');
+            var SHELL = {'bash':1,'sh':1,'shell':1,'console':1,'zsh':1,'terminal':1};
             try {
               var res = await fetch('https://api.github.com/repos/' + repo + '/releases');
               if (!res.ok) throw new Error(res.status);
@@ -334,7 +343,7 @@ jobs:
                     return pre + '<a href="https://github.com/' + user + '">@' + user + '</a>';
                   })
                   .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                  .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+                  .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
                 s = s.replace(/\x00CODE(\d+)\x00/g, function(m, idx) {
                   return '<code>' + codes[parseInt(idx)] + '</code>';
                 });
@@ -355,11 +364,14 @@ jobs:
                   if (cb) {
                     if (inList) { html += '</ul>'; inList = false; }
                     var lang = cb[1].trim();
-                    var code = '';
+                    var escaped = '';
                     i++;
-                    while (i < lines.length && !lines[i].match(/^```/)) { code += lines[i] + '\n'; i++; }
-                    var langLabel = lang ? '<div style="font-size:11px;color:var(--text-muted);padding:4px 12px;border-bottom:1px solid var(--border);font-family:IBM Plex Mono,monospace">' + lang + '</div>' : '';
-                    html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0 16px">' + langLabel + '<pre style="margin:0;border:none;border-radius:0"><code>' + code.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre></div>';
+                    while (i < lines.length && !lines[i].match(/^```/)) { escaped += lines[i] + '\n'; i++; }
+                    escaped = escaped.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    var isShell = !lang || SHELL[lang.toLowerCase()];
+                    var langLabel = (!isShell && lang) ? '<div class="lang-label">' + lang + '</div>' : '';
+                    var langClass = lang ? ' class="language-' + lang + '"' : '';
+                    html += '<div class="code-block-wrap">' + langLabel + '<pre' + langClass + '><code' + langClass + '>' + escaped + '</code></pre></div>';
                   } else if (h2) {
                     if (inList) { html += '</ul>'; inList = false; }
                     html += '<h2>' + inline(h2[1]) + '</h2>';
@@ -386,7 +398,6 @@ jobs:
                 var latest = i === 0 ? '<span class="release-latest">latest</span>' : '';
                 var openAttr = i === 0 ? ' open' : '';
 
-                // Commit SHA
                 var sha = r.target_commitish || '';
                 var shortSha = sha.substring(0, 7);
                 var shaHtml = '';
@@ -396,7 +407,6 @@ jobs:
                     + '</div>';
                 }
 
-                // Assets
                 var assets = '';
                 if (r.assets.length) {
                   var hashMap = {};
@@ -415,7 +425,7 @@ jobs:
                   var srcTar = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.tar.gz';
                   var totalAssets = mainAssets.length + 2;
 
-                  assets = '<details class="release-assets"><summary>Assets (' + totalAssets + ')</summary>';
+                  assets = '<details class="release-assets" open><summary>Assets (' + totalAssets + ')</summary>';
                   for (var j = 0; j < mainAssets.length; j++) {
                     var a = mainAssets[j];
                     var hash = hashMap[a.name];
@@ -432,6 +442,9 @@ jobs:
 
                 return '<details class="release"' + openAttr + '><summary><span class="release-tag">' + r.tag_name + '</span>' + latest + '<span class="release-date">' + d + '</span></summary><div class="release-body">' + md(r.body) + assets + shaHtml + '</div></details>';
               }).join('');
+
+              // Trigger Prism highlighting on dynamically inserted code
+              if (typeof Prism !== 'undefined') Prism.highlightAll();
             } catch(e) {
               c.innerHTML = '<p>Unable to load releases. Visit <a href="https://github.com/' + repo + '/releases">GitHub</a> directly.</p>';
             }
