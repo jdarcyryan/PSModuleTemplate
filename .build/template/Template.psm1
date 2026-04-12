@@ -58,6 +58,18 @@ if (Test-Path -Path $classesDataFilePath) {
 
 #endregion Classes
 
+#region Enums
+
+$enumsPath = "$PSScriptRoot\enums"
+
+if (Test-Path -Path $enumsPath) {
+    Get-ChildItem -Path $enumsPath -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
+        . $_.FullName
+    }
+}
+
+#endregion Enums
+
 #region Private
 
 $privatePath = "$PSScriptRoot\private"
