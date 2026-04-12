@@ -4,19 +4,80 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+  repository_dispatch:
+    types: [visibility_changed]
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  deployments: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
+  # ── Guard: check repo visibility ────────────────────────────────
+  check-visibility:
+    runs-on: ubuntu-latest
+    outputs:
+      is_private: ${{ steps.check.outputs.is_private }}
+    steps:
+      - name: Check repo visibility
+        id: check
+        run: |
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            echo "is_private=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Repository is private — Pages deployment will be skipped"
+          else
+            echo "is_private=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Teardown: remove Pages if repo is private ───────────────────
+  teardown:
+    runs-on: ubuntu-latest
+    needs: check-visibility
+    if: needs.check-visibility.outputs.is_private == 'true'
+    steps:
+      - name: Remove GitHub Pages deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Repository is private — removing existing Pages deployments"
+
+          # List all deployments in the github-pages environment
+          DEPLOYMENTS=$(gh api "repos/${REPO}/deployments?environment=github-pages&per_page=100" --jq '.[].id' 2>/dev/null || true)
+
+          if [ -z "$DEPLOYMENTS" ]; then
+            echo "No existing Pages deployments found"
+            exit 0
+          fi
+
+          # Mark each deployment as inactive, then delete it
+          for ID in $DEPLOYMENTS; do
+            echo "Deactivating deployment ${ID}..."
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${REPO}/deployments/${ID}/statuses" \
+              -f state=inactive 2>/dev/null || true
+
+            echo "Deleting deployment ${ID}..."
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${REPO}/deployments/${ID}" 2>/dev/null || true
+          done
+
+          echo "All Pages deployments removed"
+
+  # ── Build (only if public) ──────────────────────────────────────
   build:
     runs-on: ubuntu-latest
+    needs: check-visibility
+    if: needs.check-visibility.outputs.is_private == 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -197,10 +258,6 @@ jobs:
           fi
 
           # ── Fix relative links for Jekyll ─────────────────────────────
-          # Jekyll with permalink:pretty changes paths, so relative links
-          # like [X](CONTRIBUTING.md) or [X](LICENSE) would 404.
-          # Point them at their Jekyll permalinks instead.
-          # Only targets known community files in root-level markdown.
           for f in *.md; do
             [ -f "$f" ] || continue
             [ -f "CONTRIBUTING.md" ] && sed -i 's|\](CONTRIBUTING\.md)|\](contributing/)|g' "$f"
@@ -250,7 +307,6 @@ jobs:
           fi
 
           # ── Releases page ─────────────────────────────────────────────
-          # Write the JS to a separate file to avoid heredoc escaping issues
           mkdir -p _includes
           cat > _includes/releases.js << 'JSEOF'
           (async function() {
@@ -262,6 +318,29 @@ jobs:
               var data = await res.json();
               if (!data.length) { c.innerHTML = '<p>No releases found.</p>'; return; }
 
+              function inline(s) {
+                var codes = [];
+                s = s.replace(/`([^`]+)`/g, function(m, code) {
+                  codes.push(code.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+                  return '\x00CODE' + (codes.length - 1) + '\x00';
+                });
+                s = s
+                  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+                  .replace(/(https?:\/\/[^\s<)]+)/g, function(m, url, offset, str) {
+                    if (str.charAt(offset - 1) === '"' || str.charAt(offset - 1) === '>' || str.substring(offset - 6, offset) === 'href="') return m;
+                    return '<a href="' + url + '">' + url + '</a>';
+                  })
+                  .replace(/(^|[\s(])@([a-zA-Z0-9_-]+)/g, function(m, pre, user) {
+                    return pre + '<a href="https://github.com/' + user + '">@' + user + '</a>';
+                  })
+                  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                  .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+                s = s.replace(/\x00CODE(\d+)\x00/g, function(m, idx) {
+                  return '<code>' + codes[parseInt(idx)] + '</code>';
+                });
+                return s;
+              }
+
               function md(s) {
                 if (!s) return '';
                 var lines = s.split('\n');
@@ -272,29 +351,29 @@ jobs:
                   var h3 = line.match(/^### (.+)$/);
                   var h2 = line.match(/^## (.+)$/);
                   var li = line.match(/^\* (.+)$/);
-                  var cb = line.match(/^```/);
+                  var cb = line.match(/^```(.*)$/);
                   if (cb) {
                     if (inList) { html += '</ul>'; inList = false; }
+                    var lang = cb[1].trim();
                     var code = '';
                     i++;
                     while (i < lines.length && !lines[i].match(/^```/)) { code += lines[i] + '\n'; i++; }
-                    html += '<pre><code>' + code + '</code></pre>';
+                    var langLabel = lang ? '<div style="font-size:11px;color:var(--text-muted);padding:4px 12px;border-bottom:1px solid var(--border);font-family:IBM Plex Mono,monospace">' + lang + '</div>' : '';
+                    html += '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0 16px">' + langLabel + '<pre style="margin:0;border:none;border-radius:0"><code>' + code.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</code></pre></div>';
                   } else if (h2) {
                     if (inList) { html += '</ul>'; inList = false; }
-                    html += '<h2>' + h2[1] + '</h2>';
+                    html += '<h2>' + inline(h2[1]) + '</h2>';
                   } else if (h3) {
                     if (inList) { html += '</ul>'; inList = false; }
-                    html += '<h3>' + h3[1] + '</h3>';
+                    html += '<h3>' + inline(h3[1]) + '</h3>';
                   } else if (li) {
                     if (!inList) { html += '<ul>'; inList = true; }
-                    var text = li[1].replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-                    html += '<li>' + text + '</li>';
+                    html += '<li>' + inline(li[1]) + '</li>';
                   } else {
                     if (inList) { html += '</ul>'; inList = false; }
                     if (line.trim() === '---') { html += '<hr>'; }
                     else if (line.trim()) {
-                      var text = line.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-                      html += '<p>' + text + '</p>';
+                      html += '<p>' + inline(line) + '</p>';
                     }
                   }
                 }
@@ -306,16 +385,52 @@ jobs:
                 var d = new Date(r.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 var latest = i === 0 ? '<span class="release-latest">latest</span>' : '';
                 var openAttr = i === 0 ? ' open' : '';
+
+                // Commit SHA
+                var sha = r.target_commitish || '';
+                var shortSha = sha.substring(0, 7);
+                var shaHtml = '';
+                if (sha.length >= 7) {
+                  shaHtml = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)">'
+                    + '<a href="https://github.com/' + repo + '/commit/' + sha + '" style="font-family:IBM Plex Mono,monospace;font-size:12px">' + shortSha + '</a>'
+                    + '</div>';
+                }
+
+                // Assets
                 var assets = '';
                 if (r.assets.length) {
-                  assets = '<details class="release-assets"><summary>Assets (' + r.assets.length + ')</summary>';
+                  var hashMap = {};
+                  var mainAssets = [];
                   for (var j = 0; j < r.assets.length; j++) {
                     var a = r.assets[j];
-                    assets += '<div class="release-asset">' + a.name + ' <span style="color:var(--text-muted)">' + (a.size / 1024).toFixed(1) + ' KB</span></div>';
+                    if (a.name.match(/\.(sha256|sha512|md5|sha1)$/i)) {
+                      var base = a.name.replace(/\.(sha256|sha512|md5|sha1)$/i, '');
+                      hashMap[base] = a;
+                    } else {
+                      mainAssets.push(a);
+                    }
                   }
+
+                  var srcZip = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.zip';
+                  var srcTar = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.tar.gz';
+                  var totalAssets = mainAssets.length + 2;
+
+                  assets = '<details class="release-assets"><summary>Assets (' + totalAssets + ')</summary>';
+                  for (var j = 0; j < mainAssets.length; j++) {
+                    var a = mainAssets[j];
+                    var hash = hashMap[a.name];
+                    var hashHtml = '';
+                    if (hash) {
+                      hashHtml = ' <span style="font-size:11px;color:var(--text-muted)">(' + hash.name.split('.').pop() + ')</span>';
+                    }
+                    assets += '<div class="release-asset"><a href="' + a.browser_download_url + '">' + a.name + '</a> <span style="color:var(--text-muted)">' + (a.size / 1024).toFixed(1) + ' KB</span>' + hashHtml + '</div>';
+                  }
+                  assets += '<div class="release-asset"><a href="' + srcZip + '">Source code</a> <span style="color:var(--text-muted)">(zip)</span></div>';
+                  assets += '<div class="release-asset"><a href="' + srcTar + '">Source code</a> <span style="color:var(--text-muted)">(tar.gz)</span></div>';
                   assets += '</details>';
                 }
-                return '<details class="release"' + openAttr + '><summary><span class="release-tag">' + r.tag_name + '</span>' + latest + '<span class="release-date">' + d + '</span></summary><div class="release-body">' + md(r.body) + assets + '</div></details>';
+
+                return '<details class="release"' + openAttr + '><summary><span class="release-tag">' + r.tag_name + '</span>' + latest + '<span class="release-date">' + d + '</span></summary><div class="release-body">' + md(r.body) + assets + shaHtml + '</div></details>';
               }).join('');
             } catch(e) {
               c.innerHTML = '<p>Unable to load releases. Visit <a href="https://github.com/' + repo + '/releases">GitHub</a> directly.</p>';
@@ -344,7 +459,6 @@ jobs:
           done
 
           if [ -n "$LICENSE_SRC" ]; then
-            # Create LICENSE.md with front matter + full license text
             if ! ([ -f "LICENSE.md" ] && head -1 LICENSE.md | grep -q '^\-\-\-'); then
               TEMP=$(mktemp)
               printf -- '---\nlayout: default\ntitle: License\npermalink: /license/\n---\n\n# License\n\n```\n' > "$TEMP"
@@ -354,7 +468,6 @@ jobs:
               echo "Created LICENSE.md from ${LICENSE_SRC}"
             fi
           elif [ -f "LICENSE.md" ] && ! head -1 LICENSE.md | grep -q '^\-\-\-'; then
-            # LICENSE.md exists but has no front matter
             TEMP=$(mktemp)
             printf -- '---\nlayout: default\ntitle: License\npermalink: /license/\n---\n\n' > "$TEMP"
             cat LICENSE.md >> "$TEMP"
@@ -397,12 +510,14 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
+  # ── Deploy (only if build succeeded) ────────────────────────────
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    if: needs.build.result == 'success'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
