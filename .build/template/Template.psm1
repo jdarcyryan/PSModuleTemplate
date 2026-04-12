@@ -93,3 +93,15 @@ if (Test-Path -Path $publicPath) {
 }
 
 #endregion Public
+
+#region Completers
+
+$completersPath = "$PSScriptRoot\completers"
+
+if (Test-Path -Path $completersPath) {
+    Get-ChildItem -Path $completersPath -Filter '*.ps1' | where PSIsContainer -eq $false | foreach {
+        . $_.FullName
+    }
+}
+
+#region Completers
