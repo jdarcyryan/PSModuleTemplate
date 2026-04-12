@@ -18,7 +18,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Guard: check repo visibility ────────────────────────────────
   check-visibility:
     runs-on: ubuntu-latest
     outputs:
@@ -34,7 +33,6 @@ jobs:
             echo "is_private=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # ── Teardown: remove Pages if repo is private ───────────────────
   teardown:
     runs-on: ubuntu-latest
     needs: check-visibility
@@ -61,7 +59,6 @@ jobs:
           done
           echo "All Pages deployments removed"
 
-  # ── Build (only if public) ──────────────────────────────────────
   build:
     runs-on: ubuntu-latest
     needs: check-visibility
@@ -111,7 +108,6 @@ jobs:
 
           echo "::group::Generating Jekyll config and layout"
 
-          # ── _config.yml ───────────────────────────────────────────────
           cat > _config.yml << CONFIGEOF
           title: "${REPO}"
           description: "${DESC}"
@@ -127,7 +123,6 @@ jobs:
                 nav_section: docs
           CONFIGEOF
 
-          # ── _layouts/default.html ─────────────────────────────────────
           mkdir -p _layouts
           cat > _layouts/default.html << 'LAYOUTEOF'
           <!DOCTYPE html>
@@ -136,7 +131,7 @@ jobs:
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>{{ page.title | default: site.title }}</title>
-            <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/PowerShell/PowerShell/refs/heads/master/assets/ps_black_128.svg">
+            <link rel="icon" type="image/svg+xml" href="{{ site.github_repo | replace: 'github.com', 'raw.githubusercontent.com' }}/main/assets/favicon.svg">
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
@@ -146,6 +141,7 @@ jobs:
                 --text-primary:#24292f;--text-secondary:#57606a;--text-muted:#8b949e;
                 --border:#d0d7de;--link:#0969da;--accent:#fd8c73;
                 --badge-bg:#dafbe1;--badge-text:#1a7f37;
+                --inline-code-bg:#eff1f3;--inline-code-text:#24292f;
               }
               @media(prefers-color-scheme:dark){
                 :root{
@@ -153,6 +149,7 @@ jobs:
                   --text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;
                   --border:#30363d;--link:#58a6ff;--accent:#f78166;
                   --badge-bg:#1b3826;--badge-text:#3fb950;
+                  --inline-code-bg:#343942;--inline-code-text:#e6edf3;
                 }
               }
               *{margin:0;padding:0;box-sizing:border-box}
@@ -174,39 +171,41 @@ jobs:
               .content p{font-size:14px;color:var(--text-secondary);margin:0 0 16px}
               .content ul,.content ol{font-size:14px;color:var(--text-secondary);margin:0 0 16px;padding-left:24px}
               .content li{margin-bottom:4px}
-              .content code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg-code);padding:2px 6px;border-radius:4px}
-              .content pre{background:var(--bg-code);border:1px solid var(--border);border-radius:6px;padding:16px;overflow-x:auto;margin:8px 0 16px;line-height:1.5}
-              .content pre code{background:transparent;padding:0}
+              code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--inline-code-bg);color:var(--inline-code-text);padding:2px 6px;border-radius:4px}
+              pre{background:var(--bg-code);border:1px solid var(--border);border-radius:6px;padding:16px;overflow-x:auto;margin:8px 0 16px;line-height:1.5}
+              pre code{background:transparent;color:inherit;padding:0}
               .content table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:14px}
               .content th,.content td{border:1px solid var(--border);padding:8px 12px;text-align:left}
               .content th{background:var(--bg-code);font-weight:500}
               .content img{max-width:100%}
-              .content strong{color:var(--text-primary)}
+              .content strong{color:inherit}
+              .content hr{border:none;border-top:1px solid var(--border);margin:24px 0}
               .release{border:1px solid var(--border);border-radius:6px;margin-bottom:8px}
               .release>summary{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;list-style:none}
               .release>summary::-webkit-details-marker{display:none}
-              .release>summary::before{content:'';display:inline-block;width:0;height:0;border-left:5px solid var(--text-muted);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.15s}
+              .release>summary::before{content:'';display:inline-block;width:0;height:0;border-left:5px solid var(--text-muted);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.15s;flex-shrink:0}
               .release[open]>summary::before{transform:rotate(90deg)}
               .release-tag{font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--link)}
               .release-date{font-size:13px;color:var(--text-muted)}
+              .release-sha{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);margin-left:auto}
               .release-latest{font-size:11px;padding:2px 8px;border-radius:16px;background:var(--badge-bg);color:var(--badge-text);font-weight:500}
               .release-body{padding:0 16px 16px;font-size:14px;color:var(--text-secondary);line-height:1.7}
               .release-body h2,.release-body h3{font-size:14px;font-weight:500;color:var(--text-primary);margin:12px 0 4px;border:none;padding:0}
               .release-body ul{padding-left:20px}
               .release-body li{margin-bottom:2px;font-size:13px}
-              .release-body pre{background:var(--bg-code);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:13px;line-height:1.5}
-              .release-body code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:var(--bg-code);padding:2px 4px;border-radius:3px}
-              .release-body pre code{background:transparent;padding:0}
-              .release-assets{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
+              .release-body hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+              .release-body pre{background:var(--bg-code);border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:13px;line-height:1.5;margin:8px 0 16px}
+              .release-assets{margin-top:16px;border-top:1px solid var(--border);padding-top:12px}
               .release-assets>summary{padding:0;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-primary);list-style:none;display:flex;align-items:center;gap:6px}
               .release-assets>summary::-webkit-details-marker{display:none}
-              .release-assets>summary::before{content:'';display:inline-block;width:0;height:0;border-left:4px solid var(--text-muted);border-top:3px solid transparent;border-bottom:3px solid transparent;transition:transform 0.15s}
+              .release-assets>summary::before{content:'';display:inline-block;width:0;height:0;border-left:4px solid var(--text-muted);border-top:3px solid transparent;border-bottom:3px solid transparent;transition:transform 0.15s;flex-shrink:0}
               .release-assets[open]>summary::before{transform:rotate(90deg)}
-              .release-asset{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-secondary);padding:3px 0;padding-left:10px}
+              .release-asset{font-size:12px;color:var(--text-secondary);padding:4px 0 4px 10px}
+              .release-asset a{font-family:'IBM Plex Mono',monospace}
+              .release-asset-size{color:var(--text-muted);font-size:11px}
+              .release-asset-hash{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);word-break:break-all;display:block;padding-left:0;margin-top:1px}
+              .release-footer{margin-top:16px;padding-top:12px;border-top:1px solid var(--border);font-size:13px}
               .loading{text-align:center;padding:32px;color:var(--text-muted);font-size:14px}
-              .code-block-wrap{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:8px 0 16px}
-              .code-block-wrap .lang-label{font-size:11px;color:var(--text-muted);padding:4px 12px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace}
-              .code-block-wrap pre{margin:0;border:none;border-radius:0}
               pre[class*="language-"],code[class*="language-"]{font-family:'IBM Plex Mono',monospace;font-size:13px}
               pre[class*="language-"]{background:var(--bg-code);margin:0;padding:12px 16px}
               @media(prefers-color-scheme:dark){
@@ -241,13 +240,6 @@ jobs:
               <div class="content">{{ content }}</div>
             </main>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
           </body>
           </html>
@@ -320,7 +312,6 @@ jobs:
           (async function() {
             var c = document.getElementById('releases-container');
             var repo = c.getAttribute('data-repo');
-            var SHELL = {'bash':1,'sh':1,'shell':1,'console':1,'zsh':1,'terminal':1};
             try {
               var res = await fetch('https://api.github.com/repos/' + repo + '/releases');
               if (!res.ok) throw new Error(res.status);
@@ -368,10 +359,8 @@ jobs:
                     i++;
                     while (i < lines.length && !lines[i].match(/^```/)) { escaped += lines[i] + '\n'; i++; }
                     escaped = escaped.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                    var isShell = !lang || SHELL[lang.toLowerCase()];
-                    var langLabel = (!isShell && lang) ? '<div class="lang-label">' + lang + '</div>' : '';
                     var langClass = lang ? ' class="language-' + lang + '"' : '';
-                    html += '<div class="code-block-wrap">' + langLabel + '<pre' + langClass + '><code' + langClass + '>' + escaped + '</code></pre></div>';
+                    html += '<pre' + langClass + '><code' + langClass + '>' + escaped + '</code></pre>';
                   } else if (h2) {
                     if (inList) { html += '</ul>'; inList = false; }
                     html += '<h2>' + inline(h2[1]) + '</h2>';
@@ -393,58 +382,94 @@ jobs:
                 return html;
               }
 
-              c.innerHTML = data.map(function(r, i) {
+              // Fetch hash file contents for assets that are hash files
+              async function fetchHashContent(url) {
+                try {
+                  var r = await fetch(url);
+                  if (r.ok) {
+                    var text = await r.text();
+                    return text.trim();
+                  }
+                } catch(e) {}
+                return null;
+              }
+
+              var html = '';
+              for (var i = 0; i < data.length; i++) {
+                var r = data[i];
                 var d = new Date(r.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 var latest = i === 0 ? '<span class="release-latest">latest</span>' : '';
                 var openAttr = i === 0 ? ' open' : '';
 
+                // Commit SHA in header
                 var sha = r.target_commitish || '';
                 var shortSha = sha.substring(0, 7);
                 var shaHtml = '';
                 if (sha.length >= 7) {
-                  shaHtml = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)">'
-                    + '<a href="https://github.com/' + repo + '/commit/' + sha + '" style="font-family:IBM Plex Mono,monospace;font-size:12px">' + shortSha + '</a>'
-                    + '</div>';
+                  shaHtml = '<a class="release-sha" href="https://github.com/' + repo + '/commit/' + sha + '">' + shortSha + '</a>';
                 }
 
+                // Assets — show ALL files, no filtering
                 var assets = '';
-                if (r.assets.length) {
-                  var hashMap = {};
-                  var mainAssets = [];
-                  for (var j = 0; j < r.assets.length; j++) {
-                    var a = r.assets[j];
-                    if (a.name.match(/\.(sha256|sha512|md5|sha1)$/i)) {
-                      var base = a.name.replace(/\.(sha256|sha512|md5|sha1)$/i, '');
-                      hashMap[base] = a;
-                    } else {
-                      mainAssets.push(a);
-                    }
-                  }
+                var allAssets = r.assets || [];
+                var srcZip = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.zip';
+                var srcTar = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.tar.gz';
+                var totalAssets = allAssets.length + 2;
 
-                  var srcZip = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.zip';
-                  var srcTar = 'https://github.com/' + repo + '/archive/refs/tags/' + r.tag_name + '.tar.gz';
-                  var totalAssets = mainAssets.length + 2;
+                assets += '<details class="release-assets" open><summary>Assets (' + totalAssets + ')</summary>';
 
-                  assets = '<details class="release-assets" open><summary>Assets (' + totalAssets + ')</summary>';
-                  for (var j = 0; j < mainAssets.length; j++) {
-                    var a = mainAssets[j];
-                    var hash = hashMap[a.name];
-                    var hashHtml = '';
-                    if (hash) {
-                      hashHtml = ' <span style="font-size:11px;color:var(--text-muted)">(' + hash.name.split('.').pop() + ')</span>';
-                    }
-                    assets += '<div class="release-asset"><a href="' + a.browser_download_url + '">' + a.name + '</a> <span style="color:var(--text-muted)">' + (a.size / 1024).toFixed(1) + ' KB</span>' + hashHtml + '</div>';
+                // Build asset HTML with hash content fetched inline
+                for (var j = 0; j < allAssets.length; j++) {
+                  var a = allAssets[j];
+                  var isHash = a.name.match(/\.(sha256|sha512|md5|sha1)$/i);
+                  assets += '<div class="release-asset">';
+                  assets += '<a href="' + a.browser_download_url + '">' + a.name + '</a>';
+                  assets += ' <span class="release-asset-size">' + (a.size / 1024).toFixed(1) + ' KB</span>';
+                  if (isHash) {
+                    assets += '<span class="release-asset-hash" data-hash-url="' + a.browser_download_url + '">loading hash...</span>';
                   }
-                  assets += '<div class="release-asset"><a href="' + srcZip + '">Source code</a> <span style="color:var(--text-muted)">(zip)</span></div>';
-                  assets += '<div class="release-asset"><a href="' + srcTar + '">Source code</a> <span style="color:var(--text-muted)">(tar.gz)</span></div>';
-                  assets += '</details>';
+                  assets += '</div>';
                 }
 
-                return '<details class="release"' + openAttr + '><summary><span class="release-tag">' + r.tag_name + '</span>' + latest + '<span class="release-date">' + d + '</span></summary><div class="release-body">' + md(r.body) + assets + shaHtml + '</div></details>';
-              }).join('');
+                assets += '<div class="release-asset"><a href="' + srcZip + '">Source code</a> <span class="release-asset-size">(zip)</span></div>';
+                assets += '<div class="release-asset"><a href="' + srcTar + '">Source code</a> <span class="release-asset-size">(tar.gz)</span></div>';
+                assets += '</details>';
 
-              // Trigger Prism highlighting on dynamically inserted code
-              if (typeof Prism !== 'undefined') Prism.highlightAll();
+                // View release footer
+                var footer = '<div class="release-footer"><a href="https://github.com/' + repo + '/releases/tag/' + r.tag_name + '">View release</a></div>';
+
+                html += '<details class="release"' + openAttr + '><summary>'
+                  + '<span class="release-tag">' + r.tag_name + '</span>'
+                  + latest
+                  + '<span class="release-date">' + d + '</span>'
+                  + shaHtml
+                  + '</summary><div class="release-body">'
+                  + md(r.body)
+                  + assets
+                  + footer
+                  + '</div></details>';
+              }
+
+              c.innerHTML = html;
+
+              // Fetch and populate hash contents
+              var hashSpans = c.querySelectorAll('[data-hash-url]');
+              for (var k = 0; k < hashSpans.length; k++) {
+                (function(span) {
+                  fetchHashContent(span.getAttribute('data-hash-url')).then(function(hash) {
+                    if (hash) {
+                      span.textContent = hash;
+                    } else {
+                      span.textContent = '';
+                    }
+                  });
+                })(hashSpans[k]);
+              }
+
+              // Trigger Prism highlighting on dynamically inserted code blocks
+              if (typeof Prism !== 'undefined') {
+                setTimeout(function() { Prism.highlightAll(); }, 100);
+              }
             } catch(e) {
               c.innerHTML = '<p>Unable to load releases. Visit <a href="https://github.com/' + repo + '/releases">GitHub</a> directly.</p>';
             }
@@ -523,7 +548,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
-  # ── Deploy (only if build succeeded) ────────────────────────────
   deploy:
     environment:
       name: github-pages
