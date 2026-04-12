@@ -15,7 +15,10 @@ Use this template to quickly bootstrap new PowerShell module projects with indus
 - Dependency management with PSDepend
 - GitHub Actions CI/CD workflows
 - C# class support
+- Enum support with automatic loading
+- Argument completer support
 - Automatic documentation
+- Optional GitHub Pages site generation
 
 ## Getting Started
 
@@ -24,7 +27,6 @@ Use this template to quickly bootstrap new PowerShell module projects with indus
 - [Git](https://git-scm.com/install)
 - [Make](https://gnuwin32.sourceforge.net/packages/make.htm)
 - [PowerShell Core](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows)
-
 
 ### Using This Template
 
@@ -69,6 +71,52 @@ make build
 This runs all pester tests against the built module.
 ```bash
 make pester
+```
+
+## Module Structure
+
+The module loads in this order: **classes → enums → private → public → completers**.
+
+### Classes
+
+Defined in `classes/` and loaded in the order specified in `classes/classes.psd1`. Order matters — parent classes must be listed before children. Supports `.ps1`, `.cs`, and `.dll` files.
+
+### Enums
+
+Defined in `enums/` as `.ps1` files and loaded automatically.
+
+```powershell
+# enums/LogLevel.ps1
+enum LogLevel {
+    Debug
+    Info
+    Warning
+    Error
+    Critical
+}
+```
+
+### Private Functions
+
+Defined in `private/`, one function per file. Available within the module but not exported.
+
+### Public Functions
+
+Defined in `public/`, one function per file, using the `Verb-Noun` convention. To export these functions, they must be included in the `FunctionsToExport` array inside the module manifest.
+
+### Argument Completers
+
+Defined in `completers/` and loaded last. Provide tab-completion for function parameters. Use an underscore naming convention (e.g. `Complete_ParameterName.ps1`) — they are excluded from Pester naming and help tests.
+
+```powershell
+# completers/Complete_LogLevel.ps1
+Register-ArgumentCompleter -CommandName 'Write-Log' -ParameterName 'Level' -ScriptBlock {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+    [LogLevel].GetEnumNames() | where { $_ -like "$wordToComplete*" } | foreach {
+        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+    }
+}
 ```
 
 ## Dependencies
@@ -134,6 +182,30 @@ To use this workflow:
 
 After merging to master, markdown files for each public function in the module will be created.
 Ensure Get-Help is accurate and populated, as this will be referenced to create the documentation.
+
+## GitHub Pages
+
+This template includes a workflow that can automatically generate a documentation site for your module using GitHub Pages. The site is built from your repository's markdown files and includes your README as the homepage, exported command documentation, releases fetched from the GitHub API, and any LICENSE, CONTRIBUTING, or CODE_OF_CONDUCT files.
+
+### Enabling GitHub Pages
+
+1. Go to **Settings** → **Pages** in your repository.
+2. Under **Build and deployment**, set the source to **GitHub Actions**.
+3. Push to `main` or manually trigger the workflow from the **Actions** tab.
+
+The site will be published at `https://<owner>.github.io/<repo>/`.
+
+### What gets included
+
+The Pages workflow only publishes markdown files (`.md`), license files (`LICENSE`, `LICENSE.txt`), and image assets from the `assets/` folder. Everything else in your repository (source code, build scripts, tests, etc.) is excluded.
+
+### Favicon
+
+To add a favicon to your site, place an SVG file at `assets/favicon.svg` in your repository.
+
+### How it works
+
+The workflow dynamically generates the site at build time — no Jekyll configuration files need to be committed to your repository. It detects which community files exist (LICENSE, CONTRIBUTING, CODE_OF_CONDUCT) and conditionally adds them to the navigation. If GitHub Pages is not enabled, the workflow skips gracefully without failing.
 
 ## Contributing
 
