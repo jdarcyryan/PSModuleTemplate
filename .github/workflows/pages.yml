@@ -1,0 +1,321 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate Jekyll site
+        shell: bash
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          REPO_FULL: ${{ github.repository }}
+          REPO_DESC: ${{ github.event.repository.description }}
+        run: |
+          set -e
+
+          OWNER="${REPO_FULL%%/*}"
+          REPO="${REPO_NAME}"
+          DESC="${REPO_DESC:-$REPO}"
+          BASE_URL="/${REPO}"
+          STAGE="_site_source"
+
+          echo "::group::Staging allowed files"
+
+          # ── Stage ONLY allowed files into a clean directory ───────────
+          # Whitelist: *.md files + LICENSE + LICENSE.txt
+          # Everything else is excluded from the site.
+          mkdir -p "${STAGE}"
+
+          # Copy all .md files preserving directory structure
+          find . -name '*.md' \
+            -not -path './.git/*' \
+            -not -path "./${STAGE}/*" \
+            | while read -r f; do
+                dest="${STAGE}/${f#./}"
+                mkdir -p "$(dirname "$dest")"
+                cp "$f" "$dest"
+              done
+
+          # Copy LICENSE files (plain text)
+          for lf in LICENSE LICENSE.txt; do
+            [ -f "$lf" ] && cp "$lf" "${STAGE}/"
+          done
+
+          # Remove any .gitkeep files that got copied
+          find "${STAGE}" -name '.gitkeep' -delete
+
+          echo "Staged files:"
+          find "${STAGE}" -type f | sort
+          echo "::endgroup::"
+
+          # ── Everything below operates inside the staging dir ──────────
+          cd "${STAGE}"
+
+          echo "::group::Generating Jekyll config and layout"
+
+          # ── _config.yml ───────────────────────────────────────────────
+          cat > _config.yml << CONFIGEOF
+          title: "${REPO}"
+          description: "${DESC}"
+          permalink: pretty
+          baseurl: "${BASE_URL}"
+
+          defaults:
+            - scope:
+                path: "docs"
+              values:
+                layout: default
+                nav_section: docs
+          CONFIGEOF
+
+          # ── _layouts/default.html ─────────────────────────────────────
+          mkdir -p _layouts
+          cat > _layouts/default.html << 'LAYOUTEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{{ page.title | default: site.title }}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+            <style>
+              *{margin:0;padding:0;box-sizing:border-box}
+              body{font-family:'IBM Plex Sans',-apple-system,sans-serif;color:#24292f;background:#f6f8fa;line-height:1.7}
+              a{color:#0969da;text-decoration:none}
+              a:hover{text-decoration:underline}
+              .site-header{background:#fff;border-bottom:1px solid #d0d7de;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+              .site-title{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500;color:#24292f;text-decoration:none}
+              .site-nav{display:flex;gap:20px;flex-wrap:wrap}
+              .site-nav a{font-size:14px;color:#57606a;text-decoration:none;padding:4px 0}
+              .site-nav a:hover{color:#24292f}
+              .site-nav a.active{color:#24292f;font-weight:500;border-bottom:2px solid #fd8c73}
+              .container{max-width:820px;margin:32px auto;padding:0 24px}
+              .content{background:#fff;border:1px solid #d0d7de;border-radius:6px;padding:32px}
+              .content h1{font-size:24px;font-weight:500;margin:0 0 16px;border-bottom:1px solid #d0d7de;padding-bottom:8px}
+              .content h2{font-size:20px;font-weight:500;margin:24px 0 12px;border-bottom:1px solid #d0d7de;padding-bottom:6px}
+              .content h3{font-size:16px;font-weight:500;margin:20px 0 8px}
+              .content h4{font-size:14px;font-weight:500;margin:16px 0 6px}
+              .content p{font-size:14px;color:#57606a;margin:0 0 16px}
+              .content ul,.content ol{font-size:14px;color:#57606a;margin:0 0 16px;padding-left:24px}
+              .content li{margin-bottom:4px}
+              .content code{font-family:'IBM Plex Mono',monospace;font-size:13px;background:#f6f8fa;padding:2px 6px;border-radius:4px}
+              .content pre{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:16px;overflow-x:auto;margin:8px 0 16px;line-height:1.5}
+              .content pre code{background:transparent;padding:0}
+              .content table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:14px}
+              .content th,.content td{border:1px solid #d0d7de;padding:8px 12px;text-align:left}
+              .content th{background:#f6f8fa;font-weight:500}
+              .content img{max-width:100%}
+              #releases-container .release{border-bottom:1px solid #d0d7de;padding:20px 0}
+              #releases-container .release:last-child{border-bottom:none}
+              .release-tag{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500;color:#0969da}
+              .release-date{font-size:13px;color:#8b949e;margin-left:8px}
+              .release-latest{font-size:11px;padding:2px 8px;border-radius:16px;background:#dafbe1;color:#1a7f37;font-weight:500;margin-left:8px}
+              .release-body{font-size:14px;color:#57606a;margin-top:8px;line-height:1.7}
+              .release-body h2,.release-body h3{font-size:14px;font-weight:500;color:#24292f;margin:12px 0 4px;border:none;padding:0}
+              .release-body ul{padding-left:20px}
+              .release-body li{margin-bottom:2px;font-size:13px}
+              .release-assets{margin-top:12px}
+              .release-assets summary{font-size:13px;font-weight:500;cursor:pointer;color:#24292f}
+              .release-asset{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#57606a;padding:3px 0}
+              .loading{text-align:center;padding:32px;color:#8b949e;font-size:14px}
+              @media(max-width:640px){.site-header{padding:12px 16px}.container{padding:0 12px;margin:16px auto}.content{padding:20px}}
+            </style>
+          </head>
+          <body>
+            <header class="site-header">
+              <a class="site-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+              <nav class="site-nav">
+                <a href="{{ '/' | relative_url }}" {% if page.url == '/' %}class="active"{% endif %}>Home</a>
+                {% assign has_docs = false %}{% for p in site.pages %}{% if p.path contains 'docs/' and p.name != 'index.md' %}{% assign has_docs = true %}{% break %}{% endif %}{% endfor %}
+                {% if has_docs %}<a href="{{ '/docs/' | relative_url }}" {% if page.url contains '/docs' %}class="active"{% endif %}>Docs</a>{% endif %}
+                <a href="{{ '/releases/' | relative_url }}" {% if page.url contains '/releases' %}class="active"{% endif %}>Releases</a>
+                {% for p in site.pages %}{% if p.path == 'LICENSE.md' %}<a href="{{ '/license/' | relative_url }}" {% if page.url contains '/license' %}class="active"{% endif %}>License</a>{% break %}{% endif %}{% endfor %}
+                {% for p in site.pages %}{% if p.path == 'CONTRIBUTING.md' %}<a href="{{ '/contributing/' | relative_url }}" {% if page.url contains '/contributing' %}class="active"{% endif %}>Contributing</a>{% break %}{% endif %}{% endfor %}
+                {% for p in site.pages %}{% if p.path == 'CODE_OF_CONDUCT.md' %}<a href="{{ '/code-of-conduct/' | relative_url }}" {% if page.url contains '/code-of-conduct' %}class="active"{% endif %}>Code of conduct</a>{% break %}{% endif %}{% endfor %}
+              </nav>
+            </header>
+            <main class="container">
+              <div class="content">{{ content }}</div>
+            </main>
+          </body>
+          </html>
+          LAYOUTEOF
+          echo "::endgroup::"
+
+          echo "::group::Processing content files"
+
+          # ── README.md → homepage ──────────────────────────────────────
+          if [ -f "README.md" ] && ! head -1 README.md | grep -q '^\-\-\-'; then
+            TEMP=$(mktemp)
+            printf -- '---\nlayout: default\ntitle: Home\npermalink: /\n---\n\n' > "$TEMP"
+            cat README.md >> "$TEMP"
+            mv "$TEMP" README.md
+            echo "Processed README.md → homepage"
+          fi
+
+          # ── Docs: add front matter + create index ─────────────────────
+          if [ -d "docs" ]; then
+            for f in docs/*.md; do
+              [ -f "$f" ] || continue
+              [ "$(basename "$f")" = "index.md" ] && continue
+
+              if ! head -1 "$f" | grep -q '^\-\-\-'; then
+                BASENAME=$(basename "$f" .md)
+                SYNOPSIS=$(grep -m1 -A1 '## Synopsis' "$f" 2>/dev/null | tail -1 | sed 's/^[[:space:]]*//')
+                [ -z "$SYNOPSIS" ] && SYNOPSIS="$BASENAME"
+                TEMP=$(mktemp)
+                printf -- '---\nlayout: default\ntitle: %s\ndescription: "%s"\n---\n\n' "$BASENAME" "$SYNOPSIS" > "$TEMP"
+                cat "$f" >> "$TEMP"
+                mv "$TEMP" "$f"
+                echo "Processed $f"
+              fi
+            done
+
+            if [ ! -f "docs/index.md" ]; then
+              cat > docs/index.md << 'DOCSEOF'
+          ---
+          layout: default
+          title: Docs
+          permalink: /docs/
+          ---
+          # Function reference
+          {% assign doc_pages = site.pages | where_exp: "p", "p.path contains 'docs/'" | where_exp: "p", "p.name != 'index.md'" | sort: "title" %}
+          {% if doc_pages.size > 0 %}
+          <ul>
+          {% for doc in doc_pages %}
+          <li><a href="{{ doc.url | relative_url }}"><code>{{ doc.title }}</code></a> — {{ doc.description | default: doc.title }}</li>
+          {% endfor %}
+          </ul>
+          {% else %}
+          <p><em>No function documentation found yet.</em></p>
+          {% endif %}
+          DOCSEOF
+              echo "Created docs/index.md"
+            fi
+          fi
+
+          # ── Releases page ─────────────────────────────────────────────
+          cat > releases.md << RELEOF
+          ---
+          layout: default
+          title: Releases
+          permalink: /releases/
+          ---
+          # Releases
+          <div id="releases-container"><div class="loading">Loading releases...</div></div>
+          <script>
+          (async function(){
+            const c=document.getElementById('releases-container');
+            try{
+              const r=await fetch('https://api.github.com/repos/${REPO_FULL}/releases');
+              if(!r.ok)throw new Error(r.status);
+              const data=await r.json();
+              if(!data.length){c.innerHTML='<p>No releases found.</p>';return}
+              c.innerHTML=data.map((r,i)=>{
+                const d=new Date(r.published_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+                const l=i===0?'<span class="release-latest">latest</span>':'';
+                const a=r.assets.length?'<details class="release-assets"><summary>Assets ('+r.assets.length+')</summary>'+r.assets.map(a=>'<div class="release-asset">'+a.name+' <span style="color:#8b949e">'+(a.size/1024).toFixed(1)+' KB</span></div>').join('')+'</details>':'';
+                let b=(r.body||'').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^\* (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/gs,'<ul>$&</ul>').replace(/\x60\x60\x60(\w*)\n([\s\S]*?)\x60\x60\x60/g,'<pre><code>$2</code></pre>').replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+                return '<div class="release"><div><span class="release-tag">'+r.tag_name+'</span>'+l+'<span class="release-date">'+d+'</span></div><div class="release-body">'+b+'</div>'+a+'</div>';
+              }).join('');
+            }catch(e){
+              c.innerHTML='<p>Unable to load releases. Visit <a href="https://github.com/${REPO_FULL}/releases">GitHub</a> directly.</p>';
+            }
+          })();
+          </script>
+          RELEOF
+          echo "Created releases.md"
+
+          # ── License page (from LICENSE/LICENSE.txt) ────────────────────
+          LICENSE_SRC=""
+          for lf in LICENSE LICENSE.txt; do
+            [ -f "$lf" ] && LICENSE_SRC="$lf" && break
+          done
+
+          if [ -n "$LICENSE_SRC" ] || [ -f "LICENSE.md" ]; then
+            SRC="${LICENSE_SRC:-LICENSE.md}"
+            LICENSE_TYPE="License"
+            grep -qi "apache" "$SRC" 2>/dev/null && LICENSE_TYPE="Apache License 2.0"
+            grep -qi "mit license" "$SRC" 2>/dev/null && LICENSE_TYPE="MIT License"
+            grep -qi "gnu general public" "$SRC" 2>/dev/null && LICENSE_TYPE="GPL"
+            grep -qi "bsd" "$SRC" 2>/dev/null && LICENSE_TYPE="BSD License"
+
+            if ! ([ -f "LICENSE.md" ] && head -1 LICENSE.md | grep -q '^\-\-\-'); then
+              cat > LICENSE.md << LICEOF
+          ---
+          layout: default
+          title: License
+          permalink: /license/
+          ---
+          # License
+          This project is licensed under the **${LICENSE_TYPE}**.
+
+          See the [LICENSE](https://github.com/${REPO_FULL}/blob/main/${SRC}) file for the full license text.
+          LICEOF
+              echo "Created LICENSE.md (${LICENSE_TYPE})"
+            fi
+          fi
+
+          # ── CONTRIBUTING.md ───────────────────────────────────────────
+          if [ -f "CONTRIBUTING.md" ] && ! head -1 CONTRIBUTING.md | grep -q '^\-\-\-'; then
+            TEMP=$(mktemp)
+            printf -- '---\nlayout: default\ntitle: Contributing\npermalink: /contributing/\n---\n\n' > "$TEMP"
+            cat CONTRIBUTING.md >> "$TEMP"
+            mv "$TEMP" CONTRIBUTING.md
+            echo "Processed CONTRIBUTING.md"
+          fi
+
+          # ── CODE_OF_CONDUCT.md ────────────────────────────────────────
+          if [ -f "CODE_OF_CONDUCT.md" ] && ! head -1 CODE_OF_CONDUCT.md | grep -q '^\-\-\-'; then
+            TEMP=$(mktemp)
+            printf -- '---\nlayout: default\ntitle: Code of Conduct\npermalink: /code-of-conduct/\n---\n\n' > "$TEMP"
+            cat CODE_OF_CONDUCT.md >> "$TEMP"
+            mv "$TEMP" CODE_OF_CONDUCT.md
+            echo "Processed CODE_OF_CONDUCT.md"
+          fi
+
+          echo "::endgroup::"
+
+          echo "Final site source contents:"
+          find . -type f | sort
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./_site_source
+          destination: ./_site
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
