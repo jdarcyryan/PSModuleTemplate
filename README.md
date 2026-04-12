@@ -7,6 +7,18 @@ A template repository for creating PowerShell modules with built-in CI/CD, testi
 PSModuleTemplate provides a standardized structure for developing PowerShell modules with automated testing, building, and deployment workflows.
 Use this template to quickly bootstrap new PowerShell module projects with industry-standard tooling and practices.
 
+## Pipeline Architecture
+
+The CI/CD pipeline is split across three workflows triggered at different stages.
+
+![Pipeline Architecture](assets/pipeline-architecture.png)
+
+**Pull request** — opening a PR triggers two parallel jobs: integration tests (build + Pester) and the DocsBot which auto-generates markdown documentation for exported commands. Both must pass before the PR is ready to merge.
+
+**Merge to main** — merging triggers the release pipeline which builds, tests, publishes to GitHub Packages, and creates a GitHub Release with the `.nupkg`, `.zip`, sha256 hashes, and auto-generated release notes. If GitHub Pages is enabled, the site is rebuilt automatically.
+
+**Manual publish** — the PSGallery workflow is triggered manually from the Actions tab. It downloads the `.nupkg` from the latest GitHub Release and pushes it to the PowerShell Gallery.
+
 ## Features
 
 - Pre-configured module structure
